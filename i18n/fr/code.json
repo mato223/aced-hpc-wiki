@@ -1,0 +1,59 @@
+{
+  "home.meta.title": {
+    "message": "Accueil"
+  },
+  "home.hero.eyebrow": {
+    "message": "Institute of Genomics and Global Health · anciennement {former}"
+  },
+  "home.hero.title": {
+    "message": "Le calcul haute performance au service de la recherche en génomique"
+  },
+  "home.hero.subtitle": {
+    "message": "Tout ce qu'il faut pour obtenir un compte, se connecter au cluster, lancer vos analyses et obtenir de l'aide."
+  },
+  "home.hero.cta.start": {
+    "message": "Commencer"
+  },
+  "home.hero.cta.docs": {
+    "message": "Parcourir la documentation"
+  },
+  "home.cards.heading": {
+    "message": "Par où voulez-vous commencer ?"
+  },
+  "home.card.account.title": {
+    "message": "Obtenir un compte"
+  },
+  "home.card.account.text": {
+    "message": "Qui est éligible, comment faire la demande et la suite du processus."
+  },
+  "home.card.connect.title": {
+    "message": "Se connecter"
+  },
+  "home.card.connect.text": {
+    "message": "SSH depuis Linux, macOS ou Windows, clés et transferts de fichiers."
+  },
+  "home.card.jobs.title": {
+    "message": "Lancer des jobs"
+  },
+  "home.card.jobs.text": {
+    "message": "Soumettre, suivre et dépanner des jobs Slurm, y compris sur GPU."
+  },
+  "home.card.software.title": {
+    "message": "Logiciels"
+  },
+  "home.card.software.text": {
+    "message": "Modules, conteneurs et installation de vos propres outils."
+  },
+  "home.card.hardware.title": {
+    "message": "Matériel et stockage"
+  },
+  "home.card.hardware.text": {
+    "message": "Nœuds de calcul, GPU, systèmes de fichiers et quotas."
+  },
+  "home.card.support.title": {
+    "message": "Obtenir de l'aide"
+  },
+  "home.card.support.text": {
+    "message": "FAQ, rédiger une bonne demande d'assistance, et contacts."
+  }
+}

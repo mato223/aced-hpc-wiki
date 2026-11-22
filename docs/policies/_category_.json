@@ -1,0 +1,8 @@
+{
+  "label": "Policies",
+  "position": 7,
+  "link": {
+    "type": "generated-index",
+    "description": "Rules of use and how to acknowledge the cluster."
+  }
+}

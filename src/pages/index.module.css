@@ -1,0 +1,108 @@
+.hero {
+  background: linear-gradient(135deg, var(--igh-hero-from), var(--igh-hero-to));
+  color: #fff;
+  padding: 4.5rem 0;
+}
+
+.heroInner {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.8;
+  margin-bottom: 0.75rem;
+}
+
+.title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.15;
+  color: #fff;
+  margin-bottom: 1rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  opacity: 0.9;
+  max-width: 34rem;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.buttons :global(.button--primary) {
+  background: #fff;
+  border-color: #fff;
+  color: var(--igh-hero-from);
+}
+
+.buttons :global(.button--outline) {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.buttons :global(.button--outline:hover) {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.terminal {
+  background: #0d1117;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.terminalBar {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+  background: #161b22;
+}
+
+.terminalBar span {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #30363d;
+}
+
+.terminalBody {
+  margin: 0;
+  background: transparent;
+  color: #e6edf3;
+  font-size: 0.9rem;
+  line-height: 1.8;
+  padding: 1rem 1.25rem 1.25rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.prompt {
+  color: #5fd3b5;
+  user-select: none;
+}
+
+.muted {
+  color: #8b949e;
+}
+
+@media screen and (max-width: 996px) {
+  .hero {
+    padding: 3rem 0;
+  }
+  .heroInner {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "version.label": {
+    "message": "Suivant",
+    "description": "The label for version current"
+  },
+  "sidebar.docs.category.Getting Started": {
+    "message": "Prise en main",
+    "description": "The label for category Getting Started in sidebar docs"
+  },
+  "sidebar.docs.category.Getting Started.link.generated-index.description": {
+    "message": "Obtenir un compte, se connecter et lancer votre premier job.",
+    "description": "The generated-index page description for category Getting Started in sidebar docs"
+  },
+  "sidebar.docs.category.Hardware": {
+    "message": "Matériel",
+    "description": "The label for category Hardware in sidebar docs"
+  },
+  "sidebar.docs.category.Hardware.link.generated-index.description": {
+    "message": "Nœuds de calcul, GPU et systèmes de stockage.",
+    "description": "The generated-index page description for category Hardware in sidebar docs"
+  },
+  "sidebar.docs.category.Good Conduct": {
+    "message": "Bonnes pratiques",
+    "description": "The label for category Good Conduct in sidebar docs"
+  },
+  "sidebar.docs.category.Good Conduct.link.generated-index.description": {
+    "message": "Utiliser les ressources partagées de manière équitable et efficace.",
+    "description": "The generated-index page description for category Good Conduct in sidebar docs"
+  },
+  "sidebar.docs.category.Software": {
+    "message": "Logiciels",
+    "description": "The label for category Software in sidebar docs"
+  },
+  "sidebar.docs.category.Software.link.generated-index.description": {
+    "message": "Logiciels disponibles, modules et installation de vos propres outils.",
+    "description": "The generated-index page description for category Software in sidebar docs"
+  },
+  "sidebar.docs.category.Open OnDemand": {
+    "message": "Open OnDemand",
+    "description": "The label for category Open OnDemand in sidebar docs"
+  },
+  "sidebar.docs.category.Open OnDemand.link.generated-index.description": {
+    "message": "Utiliser le cluster depuis votre navigateur.",
+    "description": "The generated-index page description for category Open OnDemand in sidebar docs"
+  },
+  "sidebar.docs.category.Tutorials": {
+    "message": "Tutoriels",
+    "description": "The label for category Tutorials in sidebar docs"
+  },
+  "sidebar.docs.category.Tutorials.link.generated-index.description": {
+    "message": "Guides pas à pas, des bases de Linux aux conteneurs.",
+    "description": "The generated-index page description for category Tutorials in sidebar docs"
+  },
+  "sidebar.docs.category.Linux Basics": {
+    "message": "Bases de Linux",
+    "description": "The label for category Linux Basics in sidebar docs"
+  },
+  "sidebar.docs.category.Linux Basics.link.generated-index.description": {
+    "message": "L'essentiel de la ligne de commande.",
+    "description": "The generated-index page description for category Linux Basics in sidebar docs"
+  },
+  "sidebar.docs.category.Running Slurm Jobs": {
+    "message": "Lancer des jobs Slurm",
+    "description": "The label for category Running Slurm Jobs in sidebar docs"
+  },
+  "sidebar.docs.category.Running Slurm Jobs.link.generated-index.description": {
+    "message": "Soumettre, suivre et déboguer des jobs avec Slurm.",
+    "description": "The generated-index page description for category Running Slurm Jobs in sidebar docs"
+  },
+  "sidebar.docs.category.Containers": {
+    "message": "Conteneurs",
+    "description": "The label for category Containers in sidebar docs"
+  },
+  "sidebar.docs.category.Containers.link.generated-index.description": {
+    "message": "Des logiciels reproductibles avec Apptainer/Singularity.",
+    "description": "The generated-index page description for category Containers in sidebar docs"
+  },
+  "sidebar.docs.category.Policies": {
+    "message": "Politiques",
+    "description": "The label for category Policies in sidebar docs"
+  },
+  "sidebar.docs.category.Policies.link.generated-index.description": {
+    "message": "Règles d'utilisation et comment citer le cluster.",
+    "description": "The generated-index page description for category Policies in sidebar docs"
+  },
+  "sidebar.docs.category.Support": {
+    "message": "Assistance",
+    "description": "The label for category Support in sidebar docs"
+  },
+  "sidebar.docs.category.Support.link.generated-index.description": {
+    "message": "FAQ, glossaire et comment contacter l'équipe HPC.",
+    "description": "The generated-index page description for category Support in sidebar docs"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "link.title.Documentation": {
+    "message": "Documentation"
+  },
+  "link.title.Support": {
+    "message": "Assistance"
+  },
+  "link.title.Institute": {
+    "message": "Institut"
+  },
+  "link.item.label.Introduction": {
+    "message": "Introduction"
+  },
+  "link.item.label.Getting an account": {
+    "message": "Obtenir un compte"
+  },
+  "link.item.label.Running jobs": {
+    "message": "Lancer des jobs"
+  },
+  "link.item.label.FAQ": {
+    "message": "FAQ"
+  },
+  "link.item.label.Getting help": {
+    "message": "Obtenir de l'aide"
+  },
+  "link.item.label.Usage policy": {
+    "message": "Politique d'utilisation"
+  },
+  "link.item.label.IGH website": {
+    "message": "Site web de l'IGH"
+  },
+  "link.item.label.Redeemer's University": {
+    "message": "Redeemer's University"
+  },
+  "link.item.label.GitHub": {
+    "message": "GitHub"
+  },
+  "copyright": {
+    "message": "© 2026 Institute of Genomics and Global Health (IGH), anciennement ACEGID."
+  }
+}

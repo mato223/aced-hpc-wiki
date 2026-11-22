@@ -1,0 +1,17 @@
+{
+  "title": {
+    "message": "Wiki HPC IGH"
+  },
+  "logo.alt": {
+    "message": "Logo IGH"
+  },
+  "item.label.Documentation": {
+    "message": "Documentation"
+  },
+  "item.label.Quick start": {
+    "message": "Démarrage rapide"
+  },
+  "item.label.Support": {
+    "message": "Assistance"
+  }
+}
