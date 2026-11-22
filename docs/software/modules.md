@@ -1,16 +1,29 @@
 ---
 id: modules
-title: "Environment modules"
-sidebar_label: "Modules"
+title: Using Environment Modules
 sidebar_position: 2
+sidebar_label: "Modules"
 ---
 
-:::info[Content coming soon]
+The ACE HPC Cluster uses Lmod to manage software environments.
 
-This page is a placeholder. Planned content:
+### Basic Commands
+- List available modules:
+  ```bash
+  module avail
 
-- module avail / load / list / purge
-- Saving module collections
-- Using modules in job scripts
+- Load a module (eg., Python):
+   ```bash
+   module load python/3.9
 
-:::
+- List loaded modules:
+   ```bash
+   module list
+
+- Unload a module:
+    ```bash
+    module unload python/3.9
+
+### Tips
+Modules set environment variables (e.g., $PATH).
+Check for a full list.

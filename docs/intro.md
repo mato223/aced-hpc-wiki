@@ -1,45 +1,66 @@
 ---
 id: intro
-title: Welcome to the IGH HPC Wiki
-sidebar_label: Introduction
+title: Welcome to ACE HPC
 sidebar_position: 1
-slug: /intro
+sidebar_label: "Introduction"
 ---
 
-The **Institute of Genomics and Global Health (IGH)**, formerly ACEGID, operates a High Performance Computing (HPC) cluster to support genomics, bioinformatics and data-intensive research.
+# Welcome to ACE HPC
 
-This wiki is the reference for everyone using the cluster: how to get access, how to run work efficiently, and where to get help.
+The African Centre of Excellence in Bioinformatics and Data Intensive Sciences (ACE) operates a high-performance computing cluster designed to accelerate research across bioinformatics, computational biology, and data-intensive sciences throughout Africa.
 
-## How the cluster works
+## What is HPC?
 
-```mermaid
-flowchart LR
-  you([Your computer]) -- SSH --> login[Login node]
-  login -- sbatch / srun --> slurm{{Slurm scheduler}}
-  slurm --> cpu[CPU nodes]
-  slurm --> gpu[GPU nodes]
-  cpu & gpu <--> storage[(Shared storage)]
-  login <--> storage
-```
+High-Performance Computing (HPC) enables researchers to tackle computational problems that would be impossible or impractical on standard computers. Our cluster provides:
 
-You log in to a **login node**, prepare your work, and hand it to the **Slurm** scheduler, which runs it on the **compute nodes** when resources are free. Your files live on **shared storage** visible from every node.
+**Parallel Processing**: Run hundreds of calculations simultaneously
 
-## Start here
+**Large Memory**: Analyze datasets that exceed typical computer limits
 
-1. [Get an account](getting-started/accounts)
-2. [Connect to the cluster](getting-started/connecting)
-3. [Run your first job](getting-started/first-job)
-4. Read the [good conduct](good-conduct/overview) rules — the cluster is shared.
+**Specialized Hardware**: Access GPUs and high-core-count processors optimized for scientific computing
 
-## At a glance
+**Persistent Storage**: Store and share large research datasets securely
 
-| | |
-|---|---|
-| **Scheduler** | <Var name="scheduler" /> |
-| **Login host** | <Var name="loginHost" code /> |
-| **Support** | <Var name="supportEmail" link /> |
-| **Support hours** | <Var name="supportHours" /> |
+## Who Should Use ACE HPC?
 
-:::tip[Français]
-This wiki is also available in French — use the language menu in the top bar.
-:::
+Our cluster serves researchers who need to:
+
+- Analyze genomic sequences and perform bioinformatics workflows
+- Run molecular dynamics simulations and protein structure predictions
+- Process large-scale datasets that exceed desktop computer capabilities
+- Execute computationally intensive statistical analyses
+- Train machine learning models on biological data
+
+## Getting Started
+
+<div className="getting-started-grid">
+
+### Request Access
+New to ACE HPC? Start by [requesting an account](getting-started/accounts). Processing typically takes 2-3 business days.
+
+### Connect to the Cluster
+Learn how to [access the system](getting-started/connecting) via SSH from Linux, macOS, or Windows.
+
+### Submit Your First Job
+Follow our [Slurm Tutorial](tutorials/running-jobs/slurm-basics.md) to run your first computational job using Slurm.
+
+### Explore Resources
+Review our [hardware specifications](hardware/overview) and available [software packages](software/installed).
+
+</div>
+
+## System Overview
+
+**Workload Manager**: Slurm (Simple Linux Utility for Resource Management)  
+**Provisioning System**: Warewulf  
+**Primary Use Cases**: Bioinformatics, genomics, structural biology, data science  
+**Support Hours**: Monday-Friday, 8:00 AM - 5:00 PM EAT
+
+## Need Help?
+
+- **Documentation Issues?** Browse our [FAQ](support/faq) or [troubleshooting guides](support/contact)
+- **Technical Support**:  Email support@ace-bioinformatics.org
+- **Training**: Check our [tutorial library](tutorials/overview)
+
+
+**Ready to begin?** [Create your account →](getting-started/accounts)

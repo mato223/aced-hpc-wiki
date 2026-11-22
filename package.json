@@ -3,11 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "docusaurus": "docusaurus",
-    "start": "docusaurus start",
-    "start:fr": "docusaurus start --locale fr",
+    "start": "docusaurus build && docusaurus serve",
+    "dev": "docusaurus start",
+    "dev:fr": "docusaurus start --locale fr",
     "build": "docusaurus build",
     "serve": "docusaurus serve",
+    "test": "playwright test",
+    "test:report": "playwright show-report",
+    "docusaurus": "docusaurus",
     "clear": "docusaurus clear",
     "deploy": "docusaurus deploy",
     "swizzle": "docusaurus swizzle",
@@ -27,11 +30,22 @@
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.9.2",
-    "@docusaurus/types": "^3.9.2"
+    "@docusaurus/types": "^3.9.2",
+    "@playwright/test": "^1.65.1"
   },
   "browserslist": {
-    "production": [">0.5%", "not dead", "not op_mini all"],
-    "development": ["last 3 chrome version", "last 3 firefox version", "last 5 safari version"]
+    "production": [
+      ">0.5%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 3 chrome version",
+      "last 3 firefox version",
+      "last 5 safari version"
+    ]
   },
-  "engines": { "node": ">=20.0" }
+  "engines": {
+    "node": ">=20.0"
+  }
 }

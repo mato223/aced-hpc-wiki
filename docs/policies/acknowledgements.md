@@ -1,15 +1,10 @@
 ---
-id: acknowledgements
-title: "Acknowledging the cluster"
-sidebar_label: "Acknowledgements"
+id: acknowledgments
+title: Acknowledgments
 sidebar_position: 2
+sidebar_label: "Acknowledgements"
 ---
 
-:::info[Content coming soon]
+Please acknowledge the ACE HPC Cluster in publications:
 
-This page is a placeholder. Planned content:
-
-- Suggested acknowledgement text
-- Reporting your publications
-
-:::
+> "This research was supported by the High Performance Computing Cluster at the African Centre of Excellence in Bioinformatics and Data Intensive Sciences (ACE)."

@@ -12,14 +12,29 @@ Requires Node.js 20 or newer.
 
 ```bash
 npm install
-npm start          # English dev server  → http://localhost:3000
-npm run start:fr   # French dev server   → http://localhost:3000/fr/
-npm run build      # builds both languages into ./build
-npm run serve      # serve the build (language switch works here)
+npm start          # full site, both languages, as in production → http://localhost:3000
+npm run dev        # live-reload editing, English only
+npm run dev:fr     # live-reload editing, French only → http://localhost:3000/fr/
+npm test           # automated browser tests (see below)
 ```
 
-> The dev server only serves one language at a time. To test the language
-> switcher end to end, use `npm run build && npm run serve`.
+> `npm run dev` serves **one language at a time** (a Docusaurus limitation), so the
+> language switcher leads to an explanation page there. Use `npm start` to see
+> the real bilingual site.
+
+## Tests
+
+`npm test` builds the site and runs [Playwright](https://playwright.dev/) browser tests (`tests/`):
+
+- every page in both languages loads with no JS error, no failed request, no broken image
+- walking through all docs with "Next" (client-side navigation) produces no error
+- sidebar, homepage, navbar and footer links all resolve
+- language switch EN ↔ FR keeps you on the same page; French UI is translated
+- search returns results in both languages; dark mode toggle; 404 page
+- mobile: menu opens, no horizontal scroll
+
+`npm run test:report` opens the HTML report of the last run.
+First time on a new machine: `npx playwright install chromium`.
 
 ## Where things live
 
@@ -87,4 +102,6 @@ Contact <Var name="supportEmail" link /> — log in to <Var name="loginHost" cod
 - [ ] Replace placeholder logo/favicon and brand colours with the official IGH identity
 - [ ] Add `static/img/social-card.png` (link preview image, 1200×630)
 - [ ] Update the year in the French footer copyright (`i18n/fr/docusaurus-theme-classic/footer.json`)
-- [ ] Replace the "Content coming soon" placeholders
+- [ ] Adapt the content imported from the ACE Uganda wiki (names, emails, forms, hardware, KNL/AlphaFold pages)
+- [ ] Translate the docs into French (until then French readers see the English text with a French interface)
+- [ ] Write the "Your first job" and "Glossary" pages

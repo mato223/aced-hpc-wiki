@@ -1,17 +1,15 @@
 ---
 id: usage-policy
-title: "Usage policy"
-sidebar_label: "Usage policy"
+title: Usage Policy
 sidebar_position: 1
+sidebar_label: "Usage Policy"
 ---
 
-:::info[Content coming soon]
+### Rules
+- No commercial use without approval.
+- Respect quotas (50 GB Home, 90-day Scratch retention).
+- Do not run intensive tasks on login nodes.
 
-This page is a placeholder. Planned content:
-
-- Acceptable use
-- Data protection and sensitive data
-- Account lifecycle
-- Sanctions
-
-:::
+### Violations
+- May result in account suspension.
+- Report abuse to [support](#).
