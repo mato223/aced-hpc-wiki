@@ -16,7 +16,7 @@
     "description": "The label for category Hardware in sidebar docs"
   },
   "sidebar.docs.category.Hardware.link.generated-index.description": {
-    "message": "Nœuds de calcul, GPU et systèmes de stockage.",
+    "message": "Nœuds de calcul, nœud de connexion et espaces de stockage.",
     "description": "The generated-index page description for category Hardware in sidebar docs"
   },
   "sidebar.docs.category.Good Conduct": {
@@ -24,7 +24,7 @@
     "description": "The label for category Good Conduct in sidebar docs"
   },
   "sidebar.docs.category.Good Conduct.link.generated-index.description": {
-    "message": "Utiliser les ressources partagées de manière équitable et efficace.",
+    "message": "Comment bien utiliser les ressources partagées, efficacement.",
     "description": "The generated-index page description for category Good Conduct in sidebar docs"
   },
   "sidebar.docs.category.Software": {
@@ -34,14 +34,6 @@
   "sidebar.docs.category.Software.link.generated-index.description": {
     "message": "Logiciels disponibles, modules et installation de vos propres outils.",
     "description": "The generated-index page description for category Software in sidebar docs"
-  },
-  "sidebar.docs.category.Open OnDemand": {
-    "message": "Open OnDemand",
-    "description": "The label for category Open OnDemand in sidebar docs"
-  },
-  "sidebar.docs.category.Open OnDemand.link.generated-index.description": {
-    "message": "Utiliser le cluster depuis votre navigateur.",
-    "description": "The generated-index page description for category Open OnDemand in sidebar docs"
   },
   "sidebar.docs.category.Tutorials": {
     "message": "Tutoriels",
@@ -72,7 +64,7 @@
     "description": "The label for category Containers in sidebar docs"
   },
   "sidebar.docs.category.Containers.link.generated-index.description": {
-    "message": "Des logiciels reproductibles avec Apptainer/Singularity.",
+    "message": "Des logiciels reproductibles avec les conteneurs (Charliecloud sur le cluster).",
     "description": "The generated-index page description for category Containers in sidebar docs"
   },
   "sidebar.docs.category.Policies": {

@@ -16,19 +16,19 @@ const CARDS = [
     to: '/docs/getting-started/accounts',
     icon: icon('M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M19 8v6M22 11h-6'),
     title: <Translate id="home.card.account.title">Get an account</Translate>,
-    text: <Translate id="home.card.account.text">Who is eligible, how to apply and what happens next.</Translate>,
+    text: <Translate id="home.card.account.text">How to request access and join a project.</Translate>,
   },
   {
     to: '/docs/getting-started/connecting',
     icon: icon('M4 17l6-6-6-6M12 19h8'),
     title: <Translate id="home.card.connect.title">Connect</Translate>,
-    text: <Translate id="home.card.connect.text">SSH from Linux, macOS or Windows, keys and file transfers.</Translate>,
+    text: <Translate id="home.card.connect.text">SSH from the institute network, from Linux, macOS or Windows.</Translate>,
   },
   {
     to: '/docs/tutorials/running-jobs/slurm-basics',
     icon: icon('M5 3l14 9-14 9V3z'),
     title: <Translate id="home.card.jobs.title">Run jobs</Translate>,
-    text: <Translate id="home.card.jobs.text">Submit, monitor and troubleshoot Slurm jobs, including on GPUs.</Translate>,
+    text: <Translate id="home.card.jobs.text">Submit, monitor and troubleshoot Slurm jobs with your project account.</Translate>,
   },
   {
     to: '/docs/software/installed',
@@ -40,7 +40,7 @@ const CARDS = [
     to: '/docs/hardware/overview',
     icon: icon('M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01'),
     title: <Translate id="home.card.hardware.title">Hardware & storage</Translate>,
-    text: <Translate id="home.card.hardware.text">Compute nodes, GPUs, file systems and quotas.</Translate>,
+    text: <Translate id="home.card.hardware.text">Compute nodes, project spaces, scratch and shared references.</Translate>,
   },
   {
     to: '/docs/support/contact',

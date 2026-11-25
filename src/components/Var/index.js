@@ -6,7 +6,7 @@ import site from '@site/src/data/site';
  *
  *   <Var name="loginHost" />          -> plain text (inline code style)
  *   <Var name="supportEmail" link />  -> mailto: link
- *   <Var name="ondemandUrl" link />   -> external link
+ *   <Var name="supportPortal" link /> -> external link
  */
 export default function Var({name, link = false, code = false}) {
   const value = site[name];

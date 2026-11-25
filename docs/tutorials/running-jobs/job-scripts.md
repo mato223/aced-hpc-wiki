@@ -1,125 +1,181 @@
 ---
 id: job-scripts
-title: Writing Job Scripts
+title: Writing job scripts
+sidebar_label: "Writing job scripts"
 sidebar_position: 2
-sidebar_label: "Writing Job Scripts"
 ---
 
-SLURM job scripts are used to submit tasks to the cluster. These scripts define the resources required for the job, such as memory, time, and number of processors, as well as the software environment.
+A Slurm job script is a Bash script with `#SBATCH` lines at the top. These lines tell Slurm which project to charge, how much time, CPU and memory to reserve, and where to write the logs. The commands below them are what runs on the compute node.
 
-This guide will walk you through how to write a basic SLURM job script, using a HipSTR (short tandem repeat genotyping) job as an example.
+This page gives the IGH template, explains each line, and shows a complete example. If you prefer not to write the account and log paths yourself, use [hpcsub](hpcsub.md).
 
 ---
 
-## Basic Structure of a SLURM Job Script
-
-A basic SLURM job script is a shell script that includes SLURM directives (prefixed with `#SBATCH`) to specify job parameters, followed by commands to run the actual task.
-
-### HipSTR Job script
+## The IGH job script template {#the-igh-job-script-template}
 
 ```bash
 #!/bin/bash
-
-#SBATCH --job-name=hipstr_job      # Name of the job
-#SBATCH --output=hipstr_job.out    # Output file for standard output
-#SBATCH --error=hipstr_job.err     # Output file for standard error
-#SBATCH --time=12:00:00            # Maximum run time (HH:MM:SS)
-#SBATCH --nodes=1                  # Number of nodes to allocate
-#SBATCH --ntasks-per-node=8        # Number of tasks per node (set according to your job)
-#SBATCH --mem=32gb                 # Memory allocation per node
-
-# Load the necessary module (in this case, HipSTR)
-module load HipSTR/0.6.2
-
-# Run your job (example command for HipSTR)
-HipSTR --bams samples.bam \
-       --fasta reference.fa \
-       --regions str_regions.bed \
-       --str-vcf hipstr_results.vcf.gz \
-       --log hipstr_run.log
+#SBATCH --job-name=my_analysis
+#SBATCH --account=malaria                   # your project (required)
+#SBATCH --qos=normal                        # normal | debug | long
+#SBATCH --time=1-00:00:00
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=32G                           # ALWAYS set memory
+#SBATCH --chdir=/projects/malaria/work/<login>
+#SBATCH --output=/projects/malaria/results/slurm_logs/%x_%j.out
+#SBATCH --error=/projects/malaria/results/slurm_logs/%x_%j.err
+set -euo pipefail
+module load <tool>/<version>
+srun <tool> --threads "$SLURM_CPUS_PER_TASK" \
+     -i /projects/malaria/data/raw/<run> -o ...
 ```
 
----
+Replace `malaria` with your project (or `malaria_<sub-project>` for a sub-project account, and the matching `/projects/malaria/<sub-project>` paths), `<login>` with your login, and `<tool>` with your software.
 
-### Explanation of SLURM Directives
+### Line by line {#line-by-line}
 
-- `#!/bin/bash`: Specifies the shell to use for running the script (bash in this case).
-- `#SBATCH --job-name=hipstr_job`: Assigns a name to your job. This is helpful for identifying the job in the queue.
-- `#SBATCH --output=hipstr_job.out`: Specifies the file where standard output (stdout) will be saved.
-- `#SBATCH --error=hipstr_job.err`: Specifies the file where standard error (stderr) will be saved.
-- `#SBATCH --time=12:00:00`: Specifies the maximum run time for the job in the format `HH:MM:SS`. Set this based on how long your task is expected to run.
-- `#SBATCH --nodes=1`: Requests one compute node for the job. If your task needs more nodes, you can increase this number.
-- `#SBATCH --ntasks-per-node=8`: Requests 8 tasks (processes) per node. This is typically set based on how many CPU cores your task needs.
-- `#SBATCH --mem=32gb`: Specifies how much memory to allocate per node. If your task requires more memory, adjust this value.
+| Line | What it does |
+|------|--------------|
+| `#!/bin/bash` | Runs the script with Bash. Must be the first line. |
+| `--job-name` | Name shown in `squeue`; `%x` in the log names is replaced by it. |
+| `--account` | Slurm account of your project. **Required**: without it, or with a project you do not belong to, the job is refused. |
+| `--qos` | `normal` by default, `debug` for tests, `long` on request. See [Slurm basics](slurm-basics.md#choosing-a-qos). |
+| `--time` | Maximum run time, here 1 day (`D-HH:MM:SS`). The job is stopped when it is reached. |
+| `--cpus-per-task` | Number of CPUs reserved for your program. Pass the same number to the program. |
+| `--mem` | Memory reserved on the node. **Always set it.** |
+| `--chdir` | Folder the job starts in: your working folder in the project's `work/`. |
+| `--output`, `--error` | Log files, in the project's `results/slurm_logs/`. `%j` is the job ID. |
+| `set -euo pipefail` | Stops the script at the first error instead of carrying on with missing files. |
+| `module load` | Loads the software. See [Modules](../../software/modules.md). |
+| `srun ... "$SLURM_CPUS_PER_TASK"` | Runs the program with exactly the number of threads you reserved. |
 
----
+:::warning Two rules that protect everyone
+1. **Always set the memory** (`--mem` or `--mem-per-cpu`). Without it, the job reserves the whole memory of a node (512 GB) and blocks it.
+2. **Give your program the number of threads you reserved**: `bwa mem -t $SLURM_CPUS_PER_TASK`, `samtools -@`, `minimap2 -t`, `kraken2 --threads`, `BEAST -threads`... Otherwise the program may start one thread per CPU of the node (128) and slow down everyone.
 
-## Loading Modules
+See [Our nodes](nodes.md) to choose good values.
+:::
 
-Most HPC systems, including ACE, have software installed in modules. Before you run your job, you may need to load the required software module.
+### Before the first submission {#before-the-first-submission}
 
-In the example above, `module load HipSTR/0.6.2` loads the specific version of HipSTR needed for the task.
-
-You can check available modules on your system with:
-```bash
-module avail
-```
-
----
-
-## Writing the Commands to Run Your Task
-
-After setting up your SLURM directives, you can include the commands to run your job. In the example, the job runs a `HipSTR` command:
+`#SBATCH` lines are read by Slurm, not by Bash: variables such as `$USER` are **not** replaced in them. Write your login in full. The folders given to `--chdir`, `--output` and `--error` must exist, otherwise the job fails at once without writing a log:
 
 ```bash
-HipSTR --bams samples.bam \
-       --fasta reference.fa \
-       --regions str_regions.bed \
-       --str-vcf hipstr_results.vcf.gz \
-       --log hipstr_run.log
-```
-
-This command performs short tandem repeat (STR) genotyping using the aligned reads in `samples.bam` against a reference genome (`reference.fa`), targeting the regions defined in `str_regions.bed`. The genotyped STR calls are written to `hipstr_results.vcf.gz` and a log of the run is saved to `hipstr_run.log`.
-
-Key HipSTR arguments:
-- `--bams`: One or more BAM files containing aligned reads (comma-separated for multiple samples).
-- `--fasta`: The reference genome in FASTA format.
-- `--regions`: A BED file specifying the STR regions to genotype.
-- `--str-vcf`: Output VCF file with STR genotype calls.
-- `--log`: Log file for run details and diagnostics.
-
----
-
-## Submitting Your Job
-
-Once your job script is ready, save it to a file, such as `hipstr_job.sh`. To submit the job to SLURM, use the `sbatch` command:
-
-```bash
-sbatch hipstr_job.sh
-```
-
-You'll receive a job ID upon submission, which you can use to track or cancel the job.
-
----
-
-## Monitoring Your Job
-
-After submission, you can monitor the status of your job using `squeue`:
-
-```bash
-squeue -u $USER
-```
-
-This will list all your active and queued jobs. If your job is running, you'll see its status here. You can also check detailed job information with `scontrol`:
-
-```bash
-scontrol show job <job_id>
+mkdir -p /projects/malaria/work/$USER
+ls -d /projects/malaria/results/slurm_logs
 ```
 
 ---
 
-## Checking Output and Errors
+## A complete example: Kraken2 classification {#a-complete-example-kraken2-classification}
 
-After the job completes, check the output and error files you specified (`hipstr_job.out` and `hipstr_job.err`). If the job completes successfully, you should find your results in the output file (`hipstr_results.vcf.gz`).
+There are no bioinformatics modules yet: tools such as Kraken2 are installed with conda (`module load anaconda/2025.06`) in your home directory or in the project. See [Installing your own software](../../software/custom-install.md). This example assumes you have created a conda environment called `kraken2` that contains Kraken2.
 
-If your job fails, review the `.err` file to find details about what went wrong. Common issues could include incorrect file paths, missing dependencies, or resource allocation problems.
+```bash
+#!/bin/bash
+#SBATCH --job-name=kraken2_sample01
+#SBATCH --account=malaria                   # your project (required)
+#SBATCH --qos=normal
+#SBATCH --time=06:00:00
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64G                           # ALWAYS set memory
+#SBATCH --chdir=/projects/malaria/work/<login>
+#SBATCH --output=/projects/malaria/results/slurm_logs/%x_%j.out
+#SBATCH --error=/projects/malaria/results/slurm_logs/%x_%j.err
+set -euo pipefail
+
+# Software: conda environment created beforehand
+module load anaconda/2025.06
+eval "$(conda shell.bash hook)"
+conda activate kraken2
+
+# Inputs and outputs
+DB=/references/kraken2/2026-11
+READS=/projects/malaria/data/raw/<run>/sample01.fastq.gz
+OUT=/projects/malaria/results/$USER/kraken2
+mkdir -p "$OUT"
+
+echo "Start: $(date) on $(hostname)"
+srun kraken2 --db "$DB" \
+     --threads "$SLURM_CPUS_PER_TASK" \
+     --gzip-compressed \
+     --report "$OUT/sample01.report" \
+     --output "$OUT/sample01.kraken" \
+     "$READS"
+echo "End: $(date)"
+```
+
+Notes:
+
+- Kraken2 loads its database into memory: set `--mem` a little above the size of the database you use, then adjust with `seff`.
+- Reference databases are shared and versioned under `/references`. Use them instead of downloading your own copy, and cite the version (here `2026-11`) in your publications.
+- Raw data in `data/raw/` is read-only: read it directly, never copy or modify it.
+- Inside the script (after the `#SBATCH` lines) `$USER` works normally.
+
+---
+
+## Submitting and monitoring {#submitting-and-monitoring}
+
+```bash
+sbatch kraken2_sample01.sh             # prints: Submitted batch job <jobid>
+squeue --me                            # PD = pending, R = running
+scontrol show job <jobid>              # details, including the pending reason
+tail -f /projects/malaria/results/slurm_logs/kraken2_sample01_<jobid>.out
+```
+
+After the job:
+
+```bash
+sacct -j <jobid> --format=JobID,JobName,State,Elapsed,MaxRSS,ExitCode
+seff <jobid>                           # CPU and memory efficiency
+```
+
+If `seff` shows that the job used much less memory or CPU than requested, lower `--mem` or `--cpus-per-task` next time: your jobs will start sooner and leave room for others.
+
+---
+
+## Splitting long analyses into steps {#splitting-long-analyses-into-steps}
+
+A long pipeline in a single job is fragile: if it fails or reaches its `--time`, all the work is lost. Split it into steps, and skip a step whose output already exists.
+
+**Job arrays** run the same script on many samples. `$SLURM_ARRAY_TASK_ID` gives the number of the task:
+
+```bash
+#!/bin/bash
+#SBATCH --job-name=qc
+#SBATCH --account=malaria
+#SBATCH --time=02:00:00
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=8G
+#SBATCH --array=1-24                        # one task per sample
+#SBATCH --output=/projects/malaria/results/slurm_logs/%x_%A_%a.out
+set -euo pipefail
+
+SAMPLE=$(sed -n "${SLURM_ARRAY_TASK_ID}p" /projects/malaria/scripts/samples.txt)
+OUT=/projects/malaria/results/$USER/qc/$SAMPLE
+if [ -e "$OUT/done" ]; then echo "$SAMPLE already done"; exit 0; fi
+mkdir -p "$OUT"
+# ... run the step for $SAMPLE here ...
+touch "$OUT/done"
+```
+
+**Dependencies** start a step only when the previous one has succeeded:
+
+```bash
+jid=$(sbatch --parsable step1_qc.sh)
+sbatch --dependency=afterok:$jid step2_align.sh
+```
+
+---
+
+## Testing interactively {#testing-interactively}
+
+To try commands on a compute node before writing the script, ask for a short interactive session with the `debug` QOS:
+
+```bash
+srun --account=malaria --qos=debug --time=00:30:00 --cpus-per-task=2 --mem=4G --pty bash
+```
+
+Type `exit` when you are done to release the resources.
+
+Next: [hpcsub](hpcsub.md), [Sample job scripts](sample-scripts.md) and [Troubleshooting](troubleshooting.md).

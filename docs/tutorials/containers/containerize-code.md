@@ -7,9 +7,9 @@ sidebar_label: "Containerize Your Code"
 
 # Containerize Your Code
 
-In this tutorial, you will write a Dockerfile, build a container image, test it locally, and push it to Docker Hub so it can be used on ACE HPC. We'll work through a single example from start to finish.
+In this tutorial, you will write a Dockerfile, build a container image, test it locally, and push it to Docker Hub so it can be used on <Var name="clusterName" />. We'll work through a single example from start to finish.
 
-## What is a Dockerfile?
+## What is a Dockerfile? {#what-is-a-dockerfile}
 
 A Dockerfile is a plain text file that contains a sequence of instructions for building a container image. Each instruction creates a **layer** in the image. Docker reads the Dockerfile top-to-bottom, executing each instruction in order, and the result is an image you can run anywhere.
 
@@ -27,11 +27,11 @@ Here are the core instructions:
 
 Let's see how these work together in practice.
 
-## The Example: A Monte Carlo Simulation
+## The Example: A Monte Carlo Simulation {#the-example-a-monte-carlo-simulation}
 
 We'll containerize a Python script that estimates the value of Pi using a Monte Carlo method. This is a common computational technique — generate random points in a square, count how many fall inside a circle, and use the ratio to estimate Pi.
 
-### Project Setup
+### Project Setup {#project-setup}
 
 On your local workstation (where Docker is installed), create a project directory:
 
@@ -39,7 +39,7 @@ On your local workstation (where Docker is installed), create a project director
 $ mkdir ~/monte-carlo && cd ~/monte-carlo
 ```
 
-### The Application Code
+### The Application Code {#the-application-code}
 
 Create a file called `estimate_pi.py`:
 
@@ -105,7 +105,7 @@ Test it locally to make sure it works:
 $ python estimate_pi.py 100000
 ```
 
-### The Requirements File
+### The Requirements File {#the-requirements-file}
 
 Create `requirements.txt` with pinned versions for reproducibility:
 
@@ -117,7 +117,7 @@ numpy==1.24.3
 Using `numpy==1.24.3` instead of just `numpy` ensures that anyone building this container — today or six months from now — gets the exact same version. Without pinning, `pip install numpy` installs whatever the latest version is at build time, which can break your code if the API changes.
 :::
 
-### Writing the Dockerfile
+### Writing the Dockerfile {#writing-the-dockerfile}
 
 Now we translate the manual setup steps into a Dockerfile. Create a file called `Dockerfile` (no extension):
 
@@ -157,44 +157,21 @@ Let's walk through each instruction:
 
 **`CMD ["python", "estimate_pi.py"]`** — The default command. When you run the container without specifying a command, it executes this. You can override it at runtime by appending a different command.
 
-### Building the Image
+### Building the image {#building-the-image}
 
 From the `~/monte-carlo` directory (where your Dockerfile lives), run:
 
 ```bash
-$ docker build --platform linux/amd64 -t ianwasukira/monte-carlo:0.1 . 
-```
-- `--platform` tells docker to build the image for a specific target operating platform, Intel/AMD Linux systems
-- `-t ianwasukira/monte-carlo:0.1` specifies the account docker should push the image to & tags the image with a name and version
-- `.` tells Docker to use the current directory as the build context (it looks for a file named `Dockerfile` here)
-
-```
-[+] Building 0.5s (10/10) FINISHED                                                                                                                                                             docker:desktop-linux
- => [internal] load build definition from Dockerfile                                                                                                                                                           0.0s
- => => transferring dockerfile: 244B                                                                                                                                                                           0.0s
- => [internal] load metadata for docker.io/library/ubuntu:24.04                                                                                                                                                0.4s
- => [internal] load .dockerignore                                                                                                                                                                              0.0s
- => => transferring context: 2B                                                                                                                                                                                0.0s
- => [1/5] FROM docker.io/library/ubuntu:24.04@sha256:d1e2e92c075e5ca139d51a140fff46f84315c0fdce203eab2807c7e495eff4f9                                                                                          0.0s
- => => resolve docker.io/library/ubuntu:24.04@sha256:d1e2e92c075e5ca139d51a140fff46f84315c0fdce203eab2807c7e495eff4f9                                                                                          0.0s
- => [internal] load build context                                                                                                                                                                              0.0s
- => => transferring context: 92B                                                                                                                                                                               0.0s
- => CACHED [2/5] RUN apt-get update && apt-get upgrade -y                                                                                                                                                      0.0s
- => CACHED [3/5] RUN apt-get install -y python3                                                                                                                                                                0.0s
- => CACHED [4/5] COPY pi.py /code/pi.py                                                                                                                                                                        0.0s
- => CACHED [5/5] RUN chmod +rx /code/pi.py                                                                                                                                                                     0.0s
- => exporting to image                                                                                                                                                                                         0.0s
- => => exporting layers                                                                                                                                                                                        0.0s
- => => exporting manifest sha256:02282c6a660f0cddec59ad57f11bad9be4fa447572128d5a50109d8e8359a478                                                                                                              0.0s
- => => exporting config sha256:d8631be9d908addfd25f392d8cbf70240021c301bc79553e48d6af70067c8450                                                                                                                0.0s
- => => exporting attestation manifest sha256:e2a61ec11f0ea3d3b8c9d38e65039e1c0b9a74f5059478c7b5dcc73d449ee288                                                                                                  0.0s
- => => exporting manifest list sha256:efa123ce9ceaac09819d6f6a0d591c5b39209b61ba4a8d3657a8eac08edfcbd8                                                                                                         0.0s
- => => naming to docker.io/ianwasukira/monte-carlo:0.1                                                                                                                                                         0.0s
+$ docker build --platform linux/amd64 -t monte-carlo:0.1 .
 ```
 
-You should see Docker execute each instruction. Subsequent builds will be much faster because of layer caching — Docker skips unchanged layers.
+- `--platform linux/amd64` builds the image for Intel/AMD 64-bit Linux, the architecture of the cluster nodes. This matters if your workstation is an Apple Silicon Mac (see [Advanced build topics](advanced-builds.md#multi-architecture-builds)).
+- `-t monte-carlo:0.1` gives the image a name and a version (tag).
+- `.` tells Docker to use the current directory as the build context (it looks for a file named `Dockerfile` here).
 
-Verify the image was created:
+Docker prints each step of the Dockerfile as it runs it. Later builds are much faster thanks to layer caching: Docker skips unchanged layers.
+
+Check that the image was created:
 
 ```bash
 $ docker images monte-carlo
@@ -205,7 +182,7 @@ REPOSITORY    TAG    IMAGE ID       CREATED          SIZE
 monte-carlo   0.1    a1b2c3d4e5f6   30 seconds ago   198MB
 ```
 
-### Testing the Container
+### Testing the Container {#testing-the-container}
 
 Run the container with the default command:
 
@@ -250,7 +227,7 @@ $ docker run --rm -it monte-carlo:0.1 /bin/bash
 
 From inside the container, you can run `python`, check installed packages with `pip list`, inspect the filesystem, and so on. Type `exit` to leave.
 
-### Using .dockerignore
+### Using .dockerignore {#using-dockerignore}
 
 When Docker builds an image, it sends the entire build context (the `.` directory) to the Docker daemon. If your project directory contains large data files, `.git` history, or output files, these are unnecessarily copied and slow down the build.
 
@@ -266,40 +243,36 @@ output/
 
 This works exactly like `.gitignore` — any matching files are excluded from the build context.
 
-### Pushing to a Container Registry
+### Pushing to a container registry {#pushing-to-a-container-registry}
 
-Your image currently lives only on your local machine. To use it on ACE HPC, push it to a container registry.
+Your image only exists on your workstation. To use it on <Var name="clusterName" />, push it to a container registry (or export it to a file, see [Importing an image without internet access](containers-hpc.md#importing-an-image-without-internet-access)).
 
-### Docker Hub
+### Docker Hub {#docker-hub}
 
 ```bash
-# Log in (you'll be prompted for your Docker Hub credentials)
+# Log in (you will be prompted for your Docker Hub credentials)
 $ docker login
 
 # Tag the image with your Docker Hub username
-$ docker tag monte-carlo:0.1 ianwasukira/monte-carlo:0.1
+$ docker tag monte-carlo:0.1 yourusername/monte-carlo:0.1
 
 # Push
-$ docker push ianwasukira/monte-carlo:0.1
+$ docker push yourusername/monte-carlo:0.1
 ```
 
 ```
-The push refers to repository [docker.io/ianwasukira/monte-carlo]
+The push refers to repository [docker.io/yourusername/monte-carlo]
 b73415306fae: Pushed
-4f4fb700ef54: Mounted from ianwasukira/pi-estimator
 66a4bbbfab88: Pushed
 3fc31d9c7e98: Pushed
-3cc646d3f0dd: Pushed
-9dd65c448696: Pushed
 0.1: digest: sha256:7e702eccde1d6c730f65a47d45ce7078a54519a232dd6b84137ba14f2f4705f4 size: 856
 ```
-Navigate to [Docker Hub](https://hub.docker.com/repositories) on your preferred web browser, and go to your repositories.
 
-![Image Pushed to DockerHub](/img/docker-hub-push.png)
+Open [Docker Hub](https://hub.docker.com/repositories) in your browser and go to your repositories: `yourusername/monte-carlo` is listed with the tag `0.1`.
 
-Alternatively, you can use the GitHub Coontainer Registry (GHCR);
+You can also use the GitHub Container Registry (GHCR).
 
-### GitHub Container Registry
+### GitHub Container Registry {#github-container-registry}
 
 ```bash
 # Log in using a personal access token
@@ -312,56 +285,39 @@ $ docker tag monte-carlo:0.1 ghcr.io/yourusername/monte-carlo:0.1
 $ docker push ghcr.io/yourusername/monte-carlo:0.1
 ```
 
-### Pulling on ACE HPC
-
-Once pushed, Apptainer can convert the Docker image to its native `.sif` format. `apptainer pull` downloads and converts the image — the result is a single portable file you can reference in your job scripts:
-
-```
-$ module load apptainer
-$ apptainer pull docker://iawasukira/monte-carlo:0.1
-INFO:    Converting OCI blobs to SIF format
-INFO:    Starting build...
-INFO:    Fetching OCI image...
-28.4MiB / 28.4MiB [=============================================================================================================================================================================] 100 % 3.5 MiB/s 0s
-13.2MiB / 13.2MiB [=============================================================================================================================================================================] 100 % 3.5 MiB/s 0s
-41.1MiB / 41.1MiB [=============================================================================================================================================================================] 100 % 3.5 MiB/s 0s
-INFO:    Extracting OCI image...
-INFO:    Inserting Apptainer configuration...
-INFO:    Creating SIF file...
-INFO:    To see mksquashfs output with progress bar enable verbose logging
-```
-
-This creates a file called `monte-carlo_0.1.sif`. See the next section for how to pull and run this correctly inside a SLURM job.
-
-### Running Containers with SLURM
-
-:::danger Do not run containers on the head node
-The commands shown above (`apptainer pull` and `apptainer run`) are for illustration only. **Do not run them directly on the head node.** The head node is a shared login environment — running compute workloads there slows it down for everyone and may get your session terminated by the system administrators.
-
-All container execution must happen inside a SLURM job script submitted to the compute cluster.
+:::warning Do not put secrets or data in images
+A public image can be downloaded by anyone. Never copy passwords, tokens, or research data (sequencing data, patient information) into an image. Keep data in your project directory and mount it when the container runs.
 :::
 
-The `apptainer pull` step (converting the Docker image to a `.sif` file) can be resource-intensive and should also be done inside a job. Here is the correct approach for pulling and running the Monte Carlo container:
+### Running it on IGH HPC {#running-it-on-igh-hpc}
+
+On the cluster, Charliecloud pulls the image and converts it to a directory that `ch-run` can execute. Do this inside a job, never on the login node. Here is a complete job script for the Monte Carlo container:
 
 ```bash
 #!/bin/bash
 #SBATCH --job-name=monte-carlo
-#SBATCH --ntasks=1
+#SBATCH --account=malaria
+#SBATCH --time=01:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=8G
-#SBATCH --time=01:00:00
 #SBATCH --output=monte-carlo-%j.out
 #SBATCH --error=monte-carlo-%j.err
 
-module load apptainer
+set -euo pipefail
+module load charliecloud/0.44
 
-# Pull the image from Docker Hub (only needed once; skip if .sif already exists)
-if [ ! -f monte-carlo_0.1.sif ]; then
-    apptainer pull docker://ianwasukira/monte-carlo:0.1
+IMG=/scratch/malaria/$USER/images/monte-carlo-0.1
+
+# Pull and convert the image (only needed once)
+if [ ! -d "$IMG" ]; then
+    mkdir -p /scratch/malaria/$USER/images
+    ch-image pull yourusername/monte-carlo:0.1
+    ch-convert yourusername/monte-carlo:0.1 "$IMG"
 fi
 
 # Run the simulation inside the container
-apptainer run monte-carlo_0.1.sif 1000000 --output results.json
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+ch-run --set-env "$IMG" -- python /app/estimate_pi.py 1000000 --output /home/$USER/results.json
 ```
 
 Submit it with:
@@ -370,7 +326,7 @@ Submit it with:
 $ sbatch monte-carlo.sh
 ```
 
-The full workflow for running containers on ACE HPC, including bind mounts and GPU access, is covered in [Containers on HPC Clusters](containers-hpc).
+The full workflow (directory images, bind mounts, MPI) is covered in [Containers on HPC clusters](containers-hpc.md).
 
 ---
-**Next:** [Containers on HPC Clusters](containers-hpc) — pull your images on ACE HPC with Apptainer, write SLURM job scripts, and run MPI and GPU workloads.
+**Next:** [Containers on HPC clusters](containers-hpc.md) — run your images on <Var name="clusterName" /> with Charliecloud and Slurm.

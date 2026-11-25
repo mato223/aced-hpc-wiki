@@ -1,47 +1,52 @@
 ---
+title: Good Conduct on the IGH HPC
 sidebar_position: 1
 sidebar_label: "Overview"
 ---
-# Good Conduct on ACE HPC
 
-As a shared resource, ACE HPC serves many researchers simultaneously. Your actions directly impact the experience of other users. Following these guidelines ensures equitable access and optimal performance for everyone.
+The <Var name="clusterName" /> cluster is shared by many researchers at the same time. What you do affects everyone else's work. Following these guidelines keeps the cluster fast and available for all.
 
-## Core Principles
+## Core principles {#core-principles}
 
-1. **Do not run jobs on login nodes** - Login nodes are shared gateways, not compute resources
-2. **Respect file system quotas** - Exceeding quotas affects your jobs and strains shared storage
-3. **Submit jobs responsibly** - Request only the resources you need
-4. **Transfer files efficiently** - Use appropriate methods to avoid overloading the network
+1. **Never compute on the login node**: <Var name="loginHost" code /> is a shared gateway for editing and submitting jobs, not a compute resource. See [Login node guidelines](login-nodes.md).
+2. **Submit jobs responsibly**: always set `--account`, `--mem` and a realistic `--time`, and give your software exactly the threads you reserved. See [Job submission tips](job-submission.md).
+3. **Use each storage space for what it is for**: compute in scratch, keep results in your project, never duplicate raw data or references. See [File system practices](file-system.md).
+4. **Transfer files efficiently**: archive many small files before transferring them. See [File transfer guide](file-transfers.md).
 
-## Quick Reference
+## Quick reference {#quick-reference}
 
 | Do | Don't |
 |---|---|
-| Submit jobs via SLURM | Run computations on login nodes |
-| Monitor your quota usage | Exceed allocated storage |
-| Organise job output in `$HOME/jobs/` | Leave large result files in `$HOME` indefinitely |
-| Archive small files before transfer | Transfer thousands of tiny files |
-| Request appropriate resources | Over-request nodes or time |
+| Submit jobs with Slurm (`sbatch`, `srun`) | Run computations or pipelines on the login node |
+| Always set `--mem` (or `--mem-per-cpu`) | Submit a job without memory: it blocks a whole node |
+| Use `$SLURM_CPUS_PER_TASK` for your software's threads | Let a tool use all 128 CPUs of a node |
+| Work in scratch, keep results in `/projects/<project>/results` | Leave your only copy of results in scratch |
+| Copy into a project with `cp -r` or `rsync -rlt` | Use `cp -a`, `rsync -a` or `mv` into a project |
+| Read raw data and references where they are | Duplicate `data/raw/` or `/references` |
+| Archive small files before transferring | Transfer thousands of tiny files one by one |
 
-## Why This Matters
+## Why this matters {#why-this-matters}
 
-The ACE cluster is a shared community resource. When one user monopolizes login nodes or overwhelms the file system, it degrades performance for everyone. Responsible conduct ensures:
+The cluster has eight compute nodes shared by all IGH teams. A single job without a memory limit can block a whole node; a single heavy process on the login node can slow down everyone's sessions. Responsible use means:
 
-- **Fair access** - All researchers can work effectively
-- **System stability** - Infrastructure remains healthy and responsive
-- **Faster job turnaround** - Resources are used efficiently
+- **Access for everyone**: all researchers can work effectively;
+- **A stable system**: the login node and storage stay responsive;
+- **Shorter waiting times**: resources are not reserved for nothing.
 
-## Consequences of Misuse
+## Consequences of misuse {#consequences-of-misuse}
 
-Repeated violations of good conduct guidelines may result in:
+Repeated violations of these guidelines may result in:
 
-- Account suspension
-- Reduced resource allocations
-- Required consultation with support staff before reinstatement
+- processes being stopped or jobs being cancelled;
+- account suspension;
+- a required discussion with the support team before access is restored.
 
-## Getting Help
+See also the [Usage policy](../policies/usage-policy.md).
 
-If you're unsure whether your workflow follows good conduct guidelines, contact the ACE support team **before** running large jobs. We're here to help you succeed while maintaining a healthy shared environment.
+## Getting help {#getting-help}
 
-- Email: [support@ace-bioinformatics.org](mailto:support@ace-bioinformatics.org)
-- See the [FAQ](/docs/support/faq) for common questions
+If you are unsure whether your workflow follows these guidelines, contact the IT team **before** running large jobs:
+
+- Ticket: <Var name="supportPortal" link />
+- Email: <Var name="supportEmail" link />
+- See the [FAQ](../support/faq.md) and the [Contact](../support/contact.md) page.

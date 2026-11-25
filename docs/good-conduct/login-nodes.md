@@ -1,114 +1,121 @@
 ---
+title: Login Node Guidelines
 sidebar_position: 2
 sidebar_label: "Login Node Guidelines"
 ---
-# Login Node Guidelines
 
-Login nodes (also called head nodes) are the entry point to the ACE cluster. They are **shared among all users** and have limited resources. Running computational work on login nodes degrades the experience for everyone and may result in account suspension.
+The login node, <Var name="loginHost" code />, is the entry point to the cluster. It is **shared by all users** at the same time. Running computations on it slows everyone down and may lead to your processes being stopped or your account being suspended.
 
-## What Login Nodes Are For
-
-Login nodes are designed for lightweight, preparatory tasks:
-
-- **Editing files** - Using text editors like `vim`, `nano`, or `emacs`
-- **Compiling code** - Small compilation tasks (not parallel builds)
-- **Managing files** - Organizing directories, moving files
-- **Submitting jobs** - Using `sbatch`, `squeue`, `scancel`
-- **Monitoring jobs** - Checking job status and output
-- **Small file transfers** - Using `scp`, `rsync`, or `sftp`
-
-## What NOT to Do on Login Nodes
-
-:::danger Prohibited Activities
-The following activities are **not allowed** on login nodes:
+:::danger No computing on the login node
+All computation, pipelines included, runs on the compute nodes through Slurm. The login node is only for preparing and submitting your work.
 :::
 
-### Running Research Applications
+## What the login node is for {#what-login-nodes-are-for}
 
-Do not launch computational software directly on login nodes:
+The login node is for light, preparatory tasks:
+
+- **Editing files**: with `vim`, `nano` or `emacs`;
+- **Small compilations**: short, non-parallel builds (see [Compiling for the compute nodes](../hardware/overview.md#compiling-for-the-compute-nodes));
+- **Managing files**: organising directories, copying files into your project;
+- **Submitting jobs**: `sbatch`, `hpcsub`, `srun`, `scancel`;
+- **Monitoring jobs**: `squeue --me`, `sacct`, `seff`, reading log files;
+- **File transfers**: `scp`, `rsync` or `sftp` (see [File transfer guide](file-transfers.md)).
+
+## What not to do on the login node {#what-not-to-do-on-login-nodes}
+
+:::danger Prohibited activities
+The following activities are **not allowed** on the login node.
+:::
+
+### Running research applications {#running-research-applications}
+
+Do not launch analysis software directly on the login node:
 
 ```bash
-# DON'T do this on login nodes
-python my_simulation.py
-matlab -batch "run_analysis"
-R --vanilla < analysis.R
+# DON'T do this on the login node
+bwa mem -t 16 ref.fa reads_1.fq reads_2.fq > aln.sam
+python my_analysis.py
+Rscript analysis.R
 ./my_program
 ```
 
-**Instead**, submit these as SLURM batch jobs or request an interactive session.
+**Instead**, submit them as Slurm batch jobs (see [Job scripts](../tutorials/running-jobs/job-scripts.md) and [hpcsub](../tutorials/running-jobs/hpcsub.md)) or request an interactive session (below).
 
-### Parallel Compilation
+### Running pipelines {#running-pipelines}
 
-Avoid resource-intensive compilation commands:
+Workflow managers and pipeline scripts must not run on the login node, even if each step "only submits jobs": they keep processes running for hours and often run some steps locally. Run the whole pipeline inside a Slurm job.
+
+### Parallel compilation {#parallel-compilation}
+
+Avoid resource-intensive builds:
 
 ```bash
-# DON'T do this on login nodes
-make -j 16
-ninja -j 8
+# DON'T do this on the login node
+make -j 32
+ninja -j 16
 ```
 
-**Instead**, use single-threaded compilation on login nodes or submit compilation as a job:
+**Instead**, use a small build on the login node or compile in a job:
 
 ```bash
-# OK on login nodes
+# OK on the login node
 make -j 2
 
-# Better: submit as a job for large builds
+# Better for large builds: compile in a job, on a compute node
 sbatch compile_job.sh
 ```
 
-### Long-Running Processes
+### Long-running processes {#long-running-processes}
 
-Do not run processes that take more than a few minutes:
+Do not leave heavy processes running in the background:
 
 ```bash
-# DON'T leave these running on login nodes
+# DON'T leave computations running on the login node
 nohup long_process &
 screen -S mysession  # for computational work
 ```
 
-### Excessive Resource Monitoring
+### Excessive job monitoring {#excessive-resource-monitoring}
 
-Avoid polling job status too frequently:
+Avoid polling job status too often:
 
 ```bash
 # DON'T do this
-watch -n 1 squeue -u $USER  # Every second is too frequent
+watch -n 1 squeue --me  # every second is too frequent
 
-# OK - check every few minutes
-squeue -u $USER
+# OK - check from time to time
+squeue --me
 ```
 
-## Using Interactive Sessions
+## Using interactive sessions {#using-interactive-sessions}
 
-If you need an interactive environment for testing or development, request compute resources through SLURM:
+If you need to test commands interactively, ask Slurm for a session on a compute node:
 
 ```bash
-# Request an interactive session
-srun --nodes=1 --ntasks=1 --time=01:00:00 --pty bash
+# Interactive shell on a compute node (QOS debug: up to 1 hour)
+srun --account=malaria --qos=debug --cpus-per-task=2 --mem=4G --time=01:00:00 --pty bash
 
-# Or use salloc for more control
-salloc --nodes=1 --ntasks=4 --time=02:00:00
+# Leave the session when you are done
+exit
 ```
 
-This gives you dedicated compute resources without impacting other users.
+Replace `malaria` with your own project account. You then work on dedicated resources without affecting other users.
 
-## VSCode and IDEs
+## VS Code and other IDEs {#vscode-and-ides}
 
-:::warning VSCode Users
-Running VSCode Remote SSH on login nodes consumes significant resources and can interfere with other users. This may result in account suspension.
+:::warning No heavy IDE on the login node
+VS Code Remote SSH, Jupyter, RStudio and similar tools start servers and background processes that consume a lot of resources on the login node and slow down other users. Do not run them on <Var name="loginHost" code />.
 :::
 
 **Recommended alternatives:**
 
-1. **Use VSCode on your local machine** - Edit files locally and sync with the cluster
-2. **Request an interactive session** - Connect VSCode to a compute node
-3. **Use terminal-based editors** - `vim`, `nano`, or `emacs` on login nodes
+1. **Edit locally** on your own computer, then copy your scripts to the cluster with `rsync` (see [File transfer guide](file-transfers.md)).
+2. **Use terminal editors** on the login node: `vim`, `nano` or `emacs`.
 
-## How We Monitor Login Node Usage
+## How login node usage is monitored {#how-we-monitor-login-node-usage}
 
-The ACE team monitors login node resource usage. Users running prohibited activities may receive:
+The IT team monitors resource usage on the login node. Users running prohibited activities may receive:
 
-1. An automated warning
-2. Process termination
-3. Temporary account suspension for repeated violations
+1. a warning;
+2. termination of their processes;
+3. a temporary account suspension for repeated violations.

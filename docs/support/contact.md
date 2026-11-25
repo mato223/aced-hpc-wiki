@@ -1,84 +1,74 @@
 ---
 id: contact
-title: Getting Help
+title: Getting help
+sidebar_label: "Getting help"
 sidebar_position: 2
-sidebar_label: "Getting Help"
 ---
 
-# Getting Help
+# Getting help {#getting-help}
 
-ACE Uganda support staff are here to help you with account issues, software questions, job failures, and general HPC guidance. Before submitting a support request, take a moment to review the tips below — a well-written request helps us resolve your issue faster.
+The IGH IT team supports researchers using the cluster: access, jobs, software and data. A clear request helps us solve your problem faster.
 
-## How to Contact Us
+## Who to contact {#who-to-contact}
+
+| Your question | Contact |
+|---|---|
+| Access to a project, its rules or its data | **The project admin** first (listed in the project `README.md`). See [Projects, sub-projects and roles](../getting-started/projects.md). |
+| HPC access, new project, software, job problems, anything else | **IT support** (below). |
+
+## How to contact IT support {#how-to-contact-it-support}
 
 | Channel | Details |
-|---------|---------|
-| **Email** | [support@ace-bioinformatics.org](mailto:support@ace-bioinformatics.org) |
-| **Hours** | Monday – Friday, 9:00 AM – 5:00 PM EAT (excluding public holidays) |
-| **Response time** | Typically within 1–2 business days |
+|---|---|
+| **Support ticket** (preferred) | <Var name="supportPortal" link /> |
+| **Email** | <Var name="supportEmail" link /> |
+| **Hours** | <Var name="supportHours" /> |
 
-## Before You Submit a Request
+Use a ticket for HPC access requests, new projects, new software or reference databases, and access to the `long` QOS.
 
-Do some initial troubleshooting on your own — it's often the fastest path to a solution:
+## Before you ask {#before-you-ask}
 
-- **Check the documentation.** Browse the [FAQs](faq.md), [Good Conduct](../good-conduct/overview.md) guidelines, and [Tutorials](../tutorials/overview.md) sections of this wiki.
-- **Read the error message carefully.** Most error messages describe exactly what went wrong. Search the message text online if it's unfamiliar.
-- **Check your job output files.** Review `.out` and `.err` files from your job for clues. Run `sacct -j <jobid> --format=JobID,State,ExitCode,MaxRSS` for resource usage details.
-- **Verify your environment.** Run `module list` to confirm the right modules are loaded, and check that file paths in your scripts are correct.
+- **Check the documentation:** the [FAQ](faq.md), [Troubleshooting](../tutorials/running-jobs/troubleshooting.md) and the [good conduct guidelines](../good-conduct/overview.md).
+- **Read the error message.** It often says exactly what went wrong.
+- **Look at your job logs** (`.out` and `.err` files) and run `sacct -j <jobid> --format=JobID,State,ExitCode,MaxRSS,Elapsed` or `seff <jobid>`.
+- **Check your environment:** `module list`, your projects with `groups`, and the paths in your script.
 
-## Writing an Effective Support Request
+## Writing a good request {#writing-a-good-request}
 
-A clear, detailed request allows us to diagnose your issue without multiple back-and-forth emails. Include the following:
+Include:
 
-### What to include
+1. **Your login** on the cluster and the **project** (and sub-project) you work in.
+2. **What you were trying to do.**
+3. **What you did:** the exact commands.
+4. **What happened:** the **complete error message**, copied as is.
+5. **Job details**, if relevant: job ID, the folder of your job script, the script itself, the modules loaded.
+6. **What you already tried.**
 
-1. **Your username** on the cluster.
-2. **What you were trying to do** — a brief description of your goal.
-3. **What you did** — the exact commands or steps you ran.
-4. **What happened** — paste the **complete, verbatim error message** or unexpected output. Do not paraphrase errors.
-5. **What you expected** to happen instead.
-6. **Job details** (if applicable):
-   - Job ID(s): find with `sacct -u $USER`
-   - The directory containing your job script and data
-   - Your job script (attach or paste it in full)
-   - Any loaded modules (`module list`)
-7. **What you already tried** to fix the issue.
+### Example of a good request {#example-of-a-good-request}
 
-### Example of a good support request
-
-> **Subject:** Job 485210 — out-of-memory error running BLAST
+> **Subject:** Job 485210 killed for out-of-memory (project malaria)
 >
-> Hi, I'm user `jdoe`. I submitted a BLAST job (ID 485210) in `/home/jdoe/blast_project/` using the script `run_blast.sh`. The job was killed after 20 minutes with the error:
+> Hello, I submitted job 485210 on the `malaria` account with the script `/projects/malaria/scripts/run_assembly.sh`. It stopped after 20 minutes with:
 >
-> `slurmstepd: error: Detected 1 oom_kill event in StepId=485210.0. Some of the step tasks have been OOM Killed.`
+> `slurmstepd: error: Detected 1 oom_kill event in StepId=485210.0.`
 >
-> I requested 4 GB of memory with `--mem=4G`. My input database is 12 GB. I suspect I need more memory but I'm not sure how much to request. I tried 8 GB and it still failed. Could you advise?
+> I requested `--mem=16G`. My input is about 40 GB of reads. I tried 32G and it still failed. How much memory should I ask for?
 
-### Example of a poor support request
+### Example of a poor request {#example-of-a-poor-request}
 
 > **Subject:** Job not working
 >
 > My job failed. Can you help?
 
-The more context you provide upfront, the faster we can help.
+## What we can help with {#what-we-can-help-with}
 
-## What We Can Help With
+- **Access:** HPC access, project creation, membership problems.
+- **Jobs:** Slurm errors, choosing resources (CPUs, memory, time, QOS), out-of-memory kills.
+- **Software:** installed modules, conda, new software or reference databases.
+- **Data:** file transfers, organisation of project folders, permissions.
 
-- **Account issues** — password resets, access problems, quota increases
-- **Job failures** — debugging Slurm errors, resource allocation issues, out-of-memory kills
-- **Software** — questions about installed software, module loading, and custom installations
-- **Data management** — file transfers, storage quotas, data organization
-- **General HPC guidance** — choosing the right resources for your workload, parallelization strategies
+## Outside our scope {#outside-our-scope}
 
-## What Falls Outside Our Scope
-
-Our team focuses on cluster operations and general HPC guidance. Some requests are better addressed elsewhere:
-
-- **Debugging your application code** — we can help with HPC-specific issues (MPI errors, Slurm failures), but we cannot debug the logic of your research code.
-- **Teaching programming languages** — we recommend online resources, workshops, or your department's training programs for learning Python, R, etc.
-- **Third-party software internals** — we can help install and configure software, but for application-specific scientific questions, consult the software's own documentation or community forums.
-
-## Stay Informed
-
-- **System announcements** — maintenance windows, outages, and updates are communicated via email to all registered users. Make sure your contact email is up to date.
-- **Documentation updates** — this wiki is regularly updated. Check back for new tutorials and guides.
+- Debugging the scientific logic of your own code.
+- Teaching programming languages: use online courses and training programmes.
+- Scientific questions about third-party tools: see their documentation or user community.

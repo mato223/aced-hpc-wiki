@@ -40,7 +40,7 @@ First time on a new machine: `npx playwright install chromium`.
 
 | What | Where |
 |---|---|
-| Institute / cluster values (hostnames, emails, hours…) | `src/data/site.js` |
+| Institute / cluster values (hostname, support, hours, QOS limits, scratch purge…) | `src/data/site.js` |
 | English pages | `docs/` |
 | French pages | `i18n/fr/docusaurus-plugin-content-docs/current/` (same file paths as `docs/`) |
 | Sidebar category names (EN) | `_category_.json` in each `docs/` folder |
@@ -48,7 +48,7 @@ First time on a new machine: `npx playwright install chromium`.
 | Homepage text (FR) | `i18n/fr/code.json` |
 | Navbar / footer text (FR) | `i18n/fr/docusaurus-theme-classic/` |
 | Colours, fonts | `src/css/custom.css` (brand variables at the top) |
-| Logo, favicon | `static/img/logo.svg`, `static/img/favicon.svg` |
+| Logo, favicon, link preview | `static/img/igh-logo.png`, `igh-favicon.png`, `social-card.png`, `static/favicon.ico` (generated from `igh-logo-original.jpeg`) |
 
 ## Writing content
 
@@ -97,11 +97,8 @@ Contact <Var name="supportEmail" link /> — log in to <Var name="loginHost" cod
 
 ## Before going live — TODO
 
-- [ ] Fill in real values in `src/data/site.js` (login host, support email, forms, GitHub org)
-- [ ] Set `url` / `baseUrl` in `docusaurus.config.js` for the chosen hosting
-- [ ] Replace placeholder logo/favicon and brand colours with the official IGH identity
-- [ ] Add `static/img/social-card.png` (link preview image, 1200×630)
+- [ ] Set `url` / `baseUrl` in `docusaurus.config.js` once the wiki is hosted
+- [ ] Set `githubOrg` / `githubRepo` in `src/data/site.js` ("Edit this page" links)
+- [ ] Confirm the final QOS limits (values in `src/data/site.js` are not final)
 - [ ] Update the year in the French footer copyright (`i18n/fr/docusaurus-theme-classic/footer.json`)
-- [ ] Adapt the content imported from the ACE Uganda wiki (names, emails, forms, hardware, KNL/AlphaFold pages)
-- [ ] Translate the docs into French (until then French readers see the English text with a French interface)
-- [ ] Write the "Your first job" and "Glossary" pages
+- [ ] Review the points marked "To be confirmed" / "À confirmer" in the pages

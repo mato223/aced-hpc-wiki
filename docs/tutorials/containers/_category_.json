@@ -3,6 +3,6 @@
   "position": 4,
   "link": {
     "type": "generated-index",
-    "description": "Reproducible software with Apptainer/Singularity."
+    "description": "Reproducible software with containers (Charliecloud on the cluster)."
   }
 }

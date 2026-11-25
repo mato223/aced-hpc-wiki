@@ -1,17 +1,17 @@
 ---
 id: intro
 title: Introduction to Containers
-sidebar_position: 1
 sidebar_label: "Welcome to Containers"
+sidebar_position: 1
 ---
 
 # Introduction to Containers
 
-## What is a Container?
+## What is a container? {#what-is-a-container}
 
-A container is a lightweight, portable package that bundles an application together with everything it needs to run — libraries, tools, system packages, and configuration — into a single unit that behaves the same way on any machine.
+A container is a lightweight, portable package that bundles an application together with everything it needs to run — libraries, tools, system packages and configuration — into a single unit that behaves the same way on any machine.
 
-Without containers, getting software to run on a new machine means manually installing the right versions of every dependency and hoping nothing conflicts with what's already installed. With containers, you package the entire environment once and run it anywhere.
+Without containers, getting software to run on a new machine means installing the right version of every dependency and hoping nothing conflicts with what is already installed. With containers, you package the environment once and run it anywhere.
 
 ```
 ┌─────────────────────────────────────┐
@@ -30,57 +30,57 @@ Without containers, getting software to run on a new machine means manually inst
        laptop, cloud, HPC cluster
 ```
 
-A container image is a read-only template. When you "run" an image, you create a container — a live instance of that template. You can run many containers from the same image, and each one is isolated from the others.
+A container **image** is a read-only template. When you run an image, you create a **container**, a live instance of that template. You can run many containers from the same image, each isolated from the others.
 
 :::info Why should you care?
-If you've ever said "it works on my machine" and then spent hours debugging it on the cluster, containers eliminate that problem entirely. The environment that works on your laptop is the same environment that runs on ACE HPC.
+If you have ever said "it works on my machine" and then spent hours making it work on the cluster, containers solve that problem. The environment that works on your laptop is the same one that runs on <Var name="clusterName" />.
 :::
 
-## Containers vs. Virtual Machines
+## Containers vs. virtual machines {#containers-vs-virtual-machines}
 
-You may be familiar with Virtual Machines (VMs). Both VMs and containers provide isolation, but they work differently:
+Both virtual machines (VMs) and containers provide isolation, but they work differently:
 
-- A **Virtual Machine** includes an entire guest operating system on top of a hypervisor. This makes VMs heavy (gigabytes), slow to start (minutes), and resource-intensive.
-- A **Container** shares the host operating system's kernel and only packages the application and its dependencies. This makes containers lightweight (megabytes), fast to start (seconds), and nearly as performant as running natively.
+- A **virtual machine** includes a whole guest operating system on top of a hypervisor. VMs are heavy (gigabytes), slow to start (minutes) and resource-intensive.
+- A **container** shares the host's kernel and only packages the application and its dependencies. Containers are light (megabytes), start in seconds and run almost as fast as native software.
 
-For HPC workloads where performance matters, containers add negligible overhead compared to running software directly on the host.
+For HPC work, containers add negligible overhead compared to running software directly on the host.
 
-## Docker and Apptainer
+## Docker and Charliecloud {#docker-and-charliecloud}
 
-Two container platforms matter for HPC work:
+Two tools matter for this tutorial series.
 
-### Docker
+### Docker {#docker}
 
-[Docker](https://www.docker.com/) is the industry standard for building and distributing container images. It provides:
+[Docker](https://www.docker.com/) is the standard for building and distributing container images. It provides:
 
-- A simple build syntax (the **Dockerfile**)
-- A massive ecosystem of pre-built images on [Docker Hub](https://hub.docker.com/)
-- Excellent developer tooling
+- a simple build syntax (the **Dockerfile**)
+- a huge ecosystem of ready-made images on [Docker Hub](https://hub.docker.com/)
+- good developer tooling
 
-However, Docker requires root (administrator) privileges to run. On shared HPC systems where users don't have root access, Docker cannot be used directly.
+Docker needs administrator (root) privileges, so it **cannot be used on the cluster**. Use it on your own workstation to build images.
 
-### Apptainer
+### Charliecloud {#charliecloud}
 
-[Apptainer](https://apptainer.org/) (formerly Singularity) was built specifically for HPC. It solves the root privilege problem:
+[Charliecloud](https://charliecloud.io/) is a container runtime built for HPC centres. On <Var name="clusterName" /> it is the available runtime (module `charliecloud/0.44`):
 
-- **Runs as your normal user** — no root required
-- **Integrates with SLURM** — works seamlessly in batch job scripts
-- **Runs Docker images directly** — pull any Docker image and run it with Apptainer
-- **Near-native performance** — minimal overhead, direct access to host hardware (GPUs, high-speed networks)
+- **Runs as your normal user**: no root needed
+- **Works inside Slurm jobs**: containers run like any other program in a job script
+- **Uses Docker images**: pull an image from Docker Hub (or import one exported from Docker) and run it
+- **Near-native performance**: very little overhead
 
-**On ACE HPC, we use Apptainer to run containers.**
+:::info Apptainer: not yet available
+Apptainer (formerly Singularity) is **not yet available** on <Var name="clusterName" />. Use Charliecloud. If your workflow depends on Apptainer, contact support: <Var name="supportPortal" link />.
+:::
 
-The practical workflow is: build your containers with Docker on your workstation, push them to a registry, then pull and run them with Apptainer on ACE HPC.
-
-## The Container Workflow on ACE HPC
+## The container workflow on IGH HPC {#the-container-workflow-on-igh-hpc}
 
 ```
-  Your Workstation (Docker)              ACE HPC (Apptainer + SLURM)
- ┌──────────────────────────┐          ┌──────────────────────────┐
- │ 1. Write Dockerfile      │          │ 4. Pull image            │
- │ 2. Build image           │  ──────> │ 5. Convert to .sif       │
- │ 3. Push to registry      │          │ 6. Run with SLURM        │
- └──────────────────────────┘          └──────────────────────────┘
+  Your workstation (Docker)              IGH HPC (Charliecloud + Slurm)
+ ┌──────────────────────────┐          ┌──────────────────────────────┐
+ │ 1. Write a Dockerfile    │          │ 4. Pull the image (in a job) │
+ │ 2. Build the image       │  ──────> │ 5. Convert it to a directory │
+ │ 3. Push it to a registry │          │ 6. Run it with ch-run        │
+ └──────────────────────────┘          └──────────────────────────────┘
                     │
               Docker Hub or
               GitHub Container
@@ -88,62 +88,73 @@ The practical workflow is: build your containers with Docker on your workstation
 ```
 
 1. **Write** a Dockerfile describing your software environment
-2. **Build** the container image on your workstation (where you have Docker)
-3. **Push** the image to a container registry (Docker Hub, GitHub Container Registry)
-4. **Pull** the image on ACE HPC using Apptainer
-5. **Convert** — Apptainer automatically converts Docker images to its native `.sif` format
-6. **Run** your containerized application through SLURM job scripts
+2. **Build** the image on your workstation (where you have Docker)
+3. **Push** the image to a registry (Docker Hub, GitHub Container Registry)
+4. **Pull** the image on the cluster with `ch-image pull`, inside a job
+5. **Convert** it to a directory image in your scratch with `ch-convert`
+6. **Run** your application with `ch-run` in a Slurm job script
 
-## Quick Start: Run Your First Container
+:::warning Nothing heavy on the login node
+Pulling, converting and running containers uses CPU, memory and disk. Do it inside a job on a compute node (interactive `srun` or `sbatch`), never on the login node <Var name="loginHost" code />.
+:::
 
-Log into ACE HPC and try this:
+## Quick start: run your first container {#quick-start-run-your-first-container}
+
+Log in to the cluster, open an interactive job on a compute node, then:
 
 ```bash
-# Load the Apptainer module
-module load apptainer
+# Interactive job on a compute node
+srun --account=malaria --qos=debug --cpus-per-task=2 --mem=4G --time=00:30:00 --pty bash
 
-# Pull a Python container from Docker Hub
-apptainer pull docker://python:3.11-slim
+# Load Charliecloud
+module load charliecloud/0.44
+
+# Pull a Python image from Docker Hub
+ch-image pull python:3.11-slim
+
+# Convert it to a directory image in your scratch
+mkdir -p /scratch/malaria/$USER/images
+ch-convert python:3.11-slim /scratch/malaria/$USER/images/python-3.11-slim
 
 # Run Python inside the container
-apptainer exec python_3.11-slim.sif python -c "
-import sys
+ch-run /scratch/malaria/$USER/images/python-3.11-slim -- python3 -c "
+import sys, os
 print('Hello from inside a container!')
 print(f'Python version: {sys.version}')
-import os
 print(f'User: {os.environ.get(\"USER\", \"unknown\")}')
 print(f'Hostname: {os.uname().nodename}')
 "
 ```
 
-Notice two things: (1) you didn't install Python — it came from the container, and (2) your username and host environment are visible inside the container. This is Apptainer's design — it runs as *you*, not as root.
+Notice two things: you did not install Python — it came from the container — and you are still *you* inside the container (same user, your home directory is available).
 
-## Prerequisites
+:::caution To be confirmed
+Whether the compute nodes can download images directly from Docker Hub has not been confirmed yet. If `ch-image pull` cannot reach the registry, use the offline method described in [Containers on HPC clusters](containers-hpc.md#importing-an-image-without-internet-access).
+:::
 
-To follow these tutorials, you'll need:
+## Prerequisites {#prerequisites}
 
-- **Basic Linux command-line skills** — navigating directories, editing files, running commands
-- **A programming language** — the examples use Python, but the concepts apply to any language
+To follow these tutorials you need:
 
-For building containers (covered in the next section), you'll also need:
+- **Basic Linux command-line skills**: navigating directories, editing files, running commands (see [Introduction to Linux](../linux-basics/intro.md))
+- **A programming language**: the examples use Python, but the concepts apply to any language
 
-- [Docker Desktop](https://docs.docker.com/get-docker/) installed on your local machine
-- A free [Docker Hub](https://hub.docker.com/signup) account
+To build containers (next section), you also need on your own workstation:
 
-## Tutorial Roadmap
+- [Docker Desktop](https://docs.docker.com/get-docker/)
+- a free [Docker Hub](https://hub.docker.com/signup) account
 
-This tutorial series has three sections:
+## Tutorial roadmap {#tutorial-roadmap}
 
-| Section | What You'll Learn |
-|---------|-------------------|
-| [Containerize Your Code](containerize-code) | Write a Dockerfile, build an image, push it to a registry |
-| [Advanced Build Topics](advanced-builds) | Multi-stage builds, multi-architecture builds |
-| [Containers on HPC Clusters](containers-hpc) | Apptainer on ACE HPC, SLURM job scripts, MPI and GPU containers |
+| Section | What you will learn |
+|---------|---------------------|
+| [Containerize your code](containerize-code.md) | Write a Dockerfile, build an image, push it to a registry |
+| [Containers on HPC clusters](containers-hpc.md) | Charliecloud on <Var name="clusterName" />, Slurm job scripts, MPI containers |
+| [Advanced build topics](advanced-builds.md) | Multi-stage builds, multi-architecture builds |
 
-## References
+## References {#references}
 
-- [Apptainer User Guide](https://apptainer.org/docs/user/latest/)
-- [Docker Documentation](https://docs.docker.com/)
+- [Charliecloud documentation](https://charliecloud.io/)
+- [Docker documentation](https://docs.docker.com/)
 - [Docker Hub](https://hub.docker.com/) — public registry of container images
-- [BioContainers](https://biocontainers.pro/) — pre-built containers for bioinformatics tools
-- [NVIDIA NGC Catalog](https://catalog.ngc.nvidia.com/) — GPU-optimized containers
+- [BioContainers](https://biocontainers.pro/) — ready-made containers for bioinformatics tools

@@ -1,197 +1,219 @@
 ---
+title: File Transfer Guide
 sidebar_position: 5
 sidebar_label: "File Transfer Guide"
 ---
-# File Transfer Guide
 
-Transferring files to and from the ACE cluster requires care to avoid overloading the login nodes and shared file systems. Follow these guidelines for efficient, responsible file transfers.
+Files are transferred to and from the cluster through the login node, <Var name="loginHost" code />, with `scp`, `rsync` or `sftp`. Follow these guidelines to transfer efficiently without overloading the login node and the shared storage.
 
-## Transfer Methods
+:::info From the institute network only
+The cluster can only be reached from the IGH institute network (see [Connecting](../getting-started/connecting.md)). Run the commands below from a computer connected to that network. In the examples, replace `<login>` with your IGH username.
+:::
 
-| Method | Best For | Command |
+## Transfer methods {#transfer-methods}
+
+| Method | Best for | Example |
 |--------|----------|---------|
-| `scp` | Single files, small directories | `scp file user@ace:~/` |
-| `rsync` | Large directories, resumable transfers | `rsync -avz dir/ user@ace:~/dir/` |
-| `sftp` | Interactive transfers | `sftp user@ace` |
+| `scp` | Single files, small directories | `scp file.txt <login>@acegid-hpc-01:~/` |
+| `rsync` | Large directories, resumable transfers, synchronisation | `rsync -rltvz dir/ <login>@acegid-hpc-01:/projects/malaria/shared/dir/` |
+| `sftp` | Interactive transfers | `sftp <login>@acegid-hpc-01` |
 
-## Small File Transfer Best Practices
+## Transferring into a project {#transferring-into-a-project}
 
-### Archive Before Transferring
-
-Transferring thousands of small files individually is extremely slow and stresses the file system. Always archive first:
+Files in a project directory must keep the project's permissions so that your whole team can use them. **Into a project, use `rsync -rlt`, not `rsync -a`**: `-a` also copies the permissions and group of your own computer, and your colleagues may then get `Permission denied`.
 
 ```bash
-# On your local machine, before transferring:
-tar -czvf my_data.tar.gz my_data_directory/
+# GOOD: into a project directory
+rsync -rltvz my_data/ <login>@acegid-hpc-01:/projects/malaria/shared/my_data/
+
+# AVOID into a project: keeps your local permissions and group
+rsync -avz my_data/ <login>@acegid-hpc-01:/projects/malaria/shared/my_data/
+```
+
+If this already happened, see [Copying files into a project](file-system.md#copying-into-a-project) to fix the permissions.
+
+:::tip Sequencing runs
+Raw sequencing runs do not need to be uploaded into your project: they are made available in the project's `data/raw/` directory (see [Raw sequencing data](../hardware/storage.md#raw-data)).
+:::
+
+## Many small files: archive first {#small-file-transfer-best-practices}
+
+### Archive before transferring {#archive-before-transferring}
+
+Transferring thousands of small files one by one is very slow and stresses the shared storage. Archive them first:
+
+```bash
+# On your computer, before transferring
+tar -czf my_data.tar.gz my_data_directory/
 
 # Transfer the single archive
-scp my_data.tar.gz username@ace.hpc.ac.ug:$HOME/data/
+scp my_data.tar.gz <login>@acegid-hpc-01:/scratch/malaria/<login>/
 
-# On ACE, extract the archive
-tar -xzvf my_data.tar.gz
+# On the cluster, extract the archive
+cd /scratch/malaria/<login>
+tar -xzf my_data.tar.gz
 ```
 
-### Why Archives Are Better
+### Why archives are better {#why-archives-are-better}
 
-| Approach | 10,000 files @ 1KB each | Time |
-|----------|------------------------|------|
+| Approach | 10,000 files of 1 KB | Speed |
+|----------|----------------------|-------|
 | Individual transfers | 10,000 operations | Very slow |
-| Single tar archive | 1 operation | Fast |
+| One tar archive | 1 operation | Fast |
 
-Each file operation involves metadata overhead. Archiving eliminates this overhead.
+Each file has a fixed overhead (metadata, permissions, network round trips). An archive removes most of it.
 
-## Large File Transfers
+## Large file transfers {#large-file-transfers}
 
-### Using rsync (Recommended)
+### Using rsync (recommended) {#using-rsync-recommended}
 
 `rsync` is the best tool for large transfers because it:
-- Resumes interrupted transfers
-- Only transfers changed portions of files
-- Compresses data during transfer
+
+- resumes interrupted transfers;
+- only transfers what has changed;
+- can compress data during transfer.
 
 ```bash
-# Basic rsync with compression
-rsync -avz local_dir/ username@ace.hpc.ac.ug:$HOME/local_dir/
+# Upload a directory into your project
+rsync -rltvz local_dir/ <login>@acegid-hpc-01:/projects/malaria/shared/local_dir/
 
 # Resume an interrupted transfer
-rsync -avz --partial local_dir/ username@ace.hpc.ac.ug:$HOME/local_dir/
+rsync -rltvz --partial local_dir/ <login>@acegid-hpc-01:/projects/malaria/shared/local_dir/
 
-# Show progress for large files
-rsync -avz --progress large_file.dat username@ace.hpc.ac.ug:$HOME/data/
+# Show progress for a large file
+rsync -rltvz --progress large_file.dat <login>@acegid-hpc-01:/scratch/malaria/<login>/
 ```
 
-### rsync Options Explained
+### rsync options explained {#rsync-options-explained}
 
-| Flag | Meaning |
-|------|---------|
-| `-a` | Archive mode (preserves permissions, timestamps) |
+| Option | Meaning |
+|--------|---------|
+| `-r` | Recursive (directories) |
+| `-l` | Copy symbolic links as links |
+| `-t` | Keep modification times |
 | `-v` | Verbose output |
 | `-z` | Compress during transfer |
 | `--partial` | Keep partially transferred files |
 | `--progress` | Show transfer progress |
+| `-a` | Archive mode: `-rlt` **plus** permissions, group and owner. Do not use it into a project |
 
-### Using scp
+### Using scp {#using-scp}
 
-For simple, one-time transfers:
+For simple, one-off transfers:
 
 ```bash
-# Single file
-scp myfile.dat username@ace.hpc.ac.ug:$HOME/data/
+# A single file to your home directory
+scp myfile.txt <login>@acegid-hpc-01:~/
 
-# Directory (recursive)
-scp -r my_directory/ username@ace.hpc.ac.ug:$HOME/
+# A directory (recursive)
+scp -r my_directory/ <login>@acegid-hpc-01:/scratch/malaria/<login>/
 
 # With compression
-scp -C large_file.dat username@ace.hpc.ac.ug:$HOME/data/
+scp -C large_file.dat <login>@acegid-hpc-01:/scratch/malaria/<login>/
 ```
 
-## Concurrent Transfer Limits
+Do not use `scp -p` into a project: like `rsync -a`, it keeps your local permissions.
 
-:::warning Transfer Limits
-Limit yourself to **2-3 concurrent transfer sessions** maximum. More simultaneous transfers can overload the login nodes and network.
+### Using sftp {#using-sftp}
+
+```bash
+sftp <login>@acegid-hpc-01
+sftp> cd /projects/malaria/shared
+sftp> put my_file.txt
+sftp> get results.tar.gz
+sftp> exit
+```
+
+## Parallel transfers {#concurrent-transfer-limits}
+
+:::warning Few transfers at a time
+All transfers go through the login node. Do not launch many transfers in parallel: a few at a time is enough.
 :::
 
 ```bash
-# BAD: Many parallel transfers
+# BAD: many parallel transfers
 for i in {1..10}; do
-    scp file_$i.dat ace:$HOME/data/ &
+    scp file_$i.dat <login>@acegid-hpc-01:/scratch/malaria/<login>/ &
 done
 
-# GOOD: Sequential or limited parallel
-for file in *.dat; do
-    scp "$file" ace:$HOME/data/
-done
-
-# Or archive everything first
-tar -cvf data.tar *.dat
-scp data.tar ace:$HOME/data/
+# GOOD: archive everything, then transfer once
+tar -cf data.tar *.dat
+scp data.tar <login>@acegid-hpc-01:/scratch/malaria/<login>/
 ```
 
-## Transferring Results Back
+## Transferring results back {#transferring-results-back}
 
-### Archive Results Before Downloading
+### Archive results before downloading {#archive-results-before-downloading}
 
 ```bash
-# On ACE, prepare results for download
-cd $HOME/jobs/job_output
-tar -czvf results.tar.gz important_results/
+# On the cluster, prepare the results
+cd /projects/malaria/results/<login>
+tar -czf run42_results.tar.gz run42/
 
-# From your local machine
-scp username@ace.hpc.ac.ug:$HOME/jobs/job_output/results.tar.gz ./
+# From your computer
+scp <login>@acegid-hpc-01:/projects/malaria/results/<login>/run42_results.tar.gz ./
 ```
 
-### Selective Sync with rsync
+### Selective sync with rsync {#selective-sync-with-rsync}
 
-Only download changed files:
+Only download new or changed files:
 
 ```bash
-# Sync results to local machine (only new/changed files)
-rsync -avz username@ace.hpc.ac.ug:$HOME/projects/my_project/results/ ./local_results/
+# Sync results to your computer
+rsync -rltvz <login>@acegid-hpc-01:/projects/malaria/results/<login>/ ./local_results/
 ```
 
-## Transfer Tips by Scenario
+## Transfer tips by scenario {#transfer-tips-by-scenario}
 
-### Scenario: Upload Code Repository
+### Upload your scripts {#scenario-upload-code-repository}
 
 ```bash
-# Use rsync with exclusions
-rsync -avz --exclude='.git' --exclude='node_modules' \
-    my_project/ username@ace.hpc.ac.ug:$HOME/projects/my_project/
+# rsync with exclusions
+rsync -rltvz --exclude='.git' --exclude='__pycache__' \
+    my_scripts/ <login>@acegid-hpc-01:/projects/malaria/scripts/my_scripts/
 ```
 
-### Scenario: Upload Large Dataset
+Better still: keep your scripts in a git repository and `git clone` / `git pull` it in `/projects/malaria/scripts`.
+
+### Upload a large dataset {#scenario-upload-large-dataset}
 
 ```bash
-# For very large files, use rsync with progress
-rsync -avz --progress large_dataset.hdf5 \
-    username@ace.hpc.ac.ug:$HOME/data/
+rsync -rltvz --partial --progress large_dataset.tar.gz \
+    <login>@acegid-hpc-01:/scratch/malaria/<login>/
 ```
 
-### Scenario: Many Small Output Files
+### Many small output files {#scenario-many-small-output-files}
 
 ```bash
-# On ACE, archive outputs before download
-cd $HOME/jobs/simulation
-tar -czvf outputs.tar.gz output_dir/
+# On the cluster, archive the outputs
+cd /scratch/malaria/<login>/simulation
+tar -czf outputs.tar.gz output_dir/
 
-# Download the archive
-# (from local machine)
-scp username@ace.hpc.ac.ug:$HOME/jobs/simulation/outputs.tar.gz ./
-tar -xzvf outputs.tar.gz
+# From your computer, download and extract
+scp <login>@acegid-hpc-01:/scratch/malaria/<login>/simulation/outputs.tar.gz ./
+tar -xzf outputs.tar.gz
 ```
 
-### Scenario: Regular Sync Between Machines
+## What to avoid {#what-to-avoid}
 
-```bash
-# Create a sync script
-#!/bin/bash
-rsync -avz --delete \
-    --exclude='*.tmp' \
-    --exclude='__pycache__' \
-    ~/project/ username@ace.hpc.ac.ug:$HOME/projects/my_project/
-```
-
-## What to Avoid
-
-| Don't | Do Instead |
+| Don't | Do instead |
 |-------|------------|
 | Transfer 10,000+ small files individually | Archive first, then transfer |
-| Run 10+ concurrent transfers | Limit to 2-3 transfers |
-| Leave transferred data sitting in `$HOME` without organisation | Use subdirectories (`data/`, `projects/`) and clean up when done |
-| Use `cp` over network mounts | Use `scp` or `rsync` |
-| Transfer during peak hours if avoidable | Schedule large transfers off-peak |
+| Use `rsync -a` or `scp -p` into a project | Use `rsync -rlt` |
+| Upload raw sequencing data or reference databases | Use `data/raw/` and `/references` |
+| Run many transfers in parallel | A few transfers at a time |
+| Leave transferred data in scratch as your only copy | Keep what matters in `/projects/<project>/results` |
 
-## Checking Transfer Success
+## Checking transfer success {#checking-transfer-success}
 
 ```bash
-# Verify file integrity with checksums
-# On source machine
-md5sum large_file.dat > checksum.md5
+# On your computer: compute a checksum
+md5sum large_file.dat > large_file.dat.md5
 
-# Transfer both
-scp large_file.dat checksum.md5 ace:$HOME/data/
+# Transfer both files
+scp large_file.dat large_file.dat.md5 <login>@acegid-hpc-01:/scratch/malaria/<login>/
 
-# On ACE, verify
-cd $HOME/data
-md5sum -c checksum.md5
+# On the cluster: verify
+cd /scratch/malaria/<login>
+md5sum -c large_file.dat.md5
 ```

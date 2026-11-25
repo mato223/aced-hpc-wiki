@@ -3,6 +3,6 @@
   "position": 3,
   "link": {
     "type": "generated-index",
-    "description": "Compute nodes, GPUs and storage systems."
+    "description": "Compute nodes, login node and storage spaces."
   }
 }

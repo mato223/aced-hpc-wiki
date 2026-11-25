@@ -14,8 +14,11 @@ for (const locale of ['', '/fr']) {
       const href = await next.getAttribute('href');
       const target = href.replace(/\/$/, '');
       // native click → handled by the client-side router (no full page reload)
-      await page.evaluate(() => document.querySelector('a.pagination-nav__link--next').click());
+      await page.evaluate((h) => document.querySelector(`a.pagination-nav__link--next[href="${h}"]`).click(), href);
       await expect.poll(() => new URL(page.url()).pathname.replace(/\/$/, '')).toBe(target);
+      // wait until the new page is rendered (its "Next" link is no longer the one we clicked)
+      await expect.poll(() => page.evaluate(() =>
+        document.querySelector('a.pagination-nav__link--next')?.getAttribute('href') ?? null)).not.toBe(href);
       await expect(page.locator('h1').first()).toBeVisible();
       await expect(page).not.toHaveTitle(/Page Not Found|Page introuvable/);
       visited.add(page.url());

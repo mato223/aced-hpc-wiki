@@ -1,128 +1,159 @@
 ---
 id: sample-scripts
-title: Sample SLURM Job Scripts
-sidebar_position: 3
-sidebar_label: "Sample SLURM Job Scripts"
+title: Sample job scripts
+sidebar_label: "Sample job scripts"
+sidebar_position: 4
 ---
 
-This page provides a collection of sample SLURM job scripts designed for various purposes. These scripts are intended for demonstration purposes and can be used to understand the structure of SLURM job submissions and how to interact with the cluster.
+Small, ready-to-submit scripts to check that your environment works and to get used to the job cycle (submit, wait, read the output) before launching a real analysis.
+
+All of them use the `debug` QOS (short tests that start faster), the `malaria` project account and a small amount of memory. Replace `malaria` with your own project. The output file (`%x_%j.out`: job name and job ID) is written in the folder you submit from, for example `/projects/malaria/work/<login>`.
 
 ---
 
-## Printing Loaded Modules
+## Printing loaded modules {#printing-loaded-modules}
 
-This script lists all currently loaded modules on the cluster, which can help you understand which software packages are available for use.
+Shows which modules are loaded by default on a compute node, and which ones are available.
 
-### Script: `list_modules.sh`
+### Script: `list_modules.sh` {#script-list_modulessh}
 
 ```bash
 #!/bin/bash
-#SBATCH --job-name=list_modules       # Job name
-#SBATCH --output=list_modules.out     # Standard output file
-#SBATCH --error=list_modules.err      # Standard error file
+#SBATCH --job-name=list_modules
+#SBATCH --account=malaria                  # your project (required)
+#SBATCH --qos=debug
+#SBATCH --time=00:05:00
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=1G
+#SBATCH --output=%x_%j.out
 
-# List currently loaded modules
 module list
+module -t avail
 ```
 
-### How to Use:
-- Save this script as `list_modules.sh`.
-- Submit the script using `sbatch list_modules.sh`.
-- Check the output in the `list_modules.out` file.
+### How to use {#how-to-use}
+
+- Save the script as `list_modules.sh`.
+- Submit it with `sbatch list_modules.sh`.
+- Read `list_modules_<jobid>.out`. Module lists are written to the error stream, so they appear in the same file here.
 
 ---
 
-## Checking Available Disk Space
+## Checking the storage spaces {#checking-the-storage-spaces}
 
-This script prints the available disk space on the system, which can be useful to monitor the storage usage on your home or project directories.
+Checks that the job sees your home directory, the project, your scratch and the shared references, as the login node does.
 
-### Script: `check_disk_space.sh`
+### Script: `check_storage.sh` {#script-check_storagesh}
 
 ```bash
 #!/bin/bash
-#SBATCH --job-name=check_disk_space    # Job name
-#SBATCH --output=check_disk_space.out  # Standard output file
-#SBATCH --error=check_disk_space.err   # Standard error file
+#SBATCH --job-name=check_storage
+#SBATCH --account=malaria                  # your project (required)
+#SBATCH --qos=debug
+#SBATCH --time=00:05:00
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=1G
+#SBATCH --output=%x_%j.out
 
-# Check available disk space
-df -h
+echo "Node: $(hostname)"
+df -h $HOME /projects/malaria /scratch/malaria /references
+ls -ld /projects/malaria /scratch/malaria/$USER
 ```
 
-### How to Use:
-- Save this script as `check_disk_space.sh`.
-- Submit the script using `sbatch check_disk_space.sh`.
-- The available disk space information will be output to `check_disk_space.out`.
+### How to use {#how-to-use-1}
+
+- Save the script as `check_storage.sh` and submit it with `sbatch check_storage.sh`.
+- In `check_storage_<jobid>.out`, check that every space is listed. If your scratch folder does not exist yet, create it with `mkdir -p /scratch/malaria/$USER`.
 
 ---
 
-## Sample Script 3: Printing the Date and Time
+## Printing the date and the job's resources {#printing-the-date-and-the-jobs-resources}
 
-This script prints the current date and time, which can help you verify when your job was started and track the duration of the job.
+Prints when the job started, on which node, and what Slurm gave it.
 
-### Script: `print_date.sh`
+### Script: `job_info.sh` {#script-job_infosh}
 
 ```bash
 #!/bin/bash
-#SBATCH --job-name=print_date       # Job name
-#SBATCH --output=print_date.out     # Standard output file
-#SBATCH --error=print_date.err      # Standard error file
+#SBATCH --job-name=job_info
+#SBATCH --account=malaria                  # your project (required)
+#SBATCH --qos=debug
+#SBATCH --time=00:05:00
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=2G
+#SBATCH --output=%x_%j.out
 
-# Print the current date and time
 date
+echo "Job ID:        $SLURM_JOB_ID"
+echo "Node:          $(hostname)"
+echo "Account:       $SLURM_JOB_ACCOUNT"
+echo "CPUs per task: $SLURM_CPUS_PER_TASK"
+echo "Memory (MB):   $SLURM_MEM_PER_NODE"
 ```
 
-### How to Use:
-- Save this script as `print_date.sh`.
-- Submit the script using `sbatch print_date.sh`.
-- The current date and time will be printed in the `print_date.out` file.
+### How to use {#how-to-use-2}
+
+- Save the script as `job_info.sh` and submit it with `sbatch job_info.sh`.
+- Compare the values in `job_info_<jobid>.out` with what you requested.
 
 ---
 
-## Running a Simple R Script
+## Running a simple R script {#running-a-simple-r-script}
 
-This script runs a simple R script that prints "Hello, World!", which demonstrates how to submit and run an R job using SLURM.
+R 4.2.1 is available after loading the GNU 12 compiler module: `module load gnu12 R/4.2.1`.
 
-### Script: `run_r_demo.sh`
-```bash
-#!/bin/bash
-#SBATCH --job-name=r_demo            # Job name
-#SBATCH --output=r_demo.out          # Standard output file
-#SBATCH --error=r_demo.err           # Standard error file
-#SBATCH --mem=1gb                    # Memory request
-
-# Load R module
-module load R/4.5.0
-
-# Run a simple R script that prints "Hello, World!"
-echo "cat('Hello, World!\n')" | Rscript --vanilla -
-```
-
-### How to Use:
-- Save this script as `run_r_demo.sh`.
-- Submit the script using `sbatch run_r_demo.sh`.
-- The output will be shown in `r_demo.out`, where it should print "Hello, World!".
-
----
-
-## Running a Simple Shell Command (Echo)
-
-This script demonstrates how to use a simple `echo` command to print a message, which is useful for testing job submission with minimal complexity.
-
-### Script: `echo_message.sh`
+### Script: `run_r_demo.sh` {#script-run_r_demosh}
 
 ```bash
 #!/bin/bash
-#SBATCH --job-name=echo_message       # Job name
-#SBATCH --output=echo_message.out     # Standard output file
-#SBATCH --error=echo_message.err      # Standard error file
+#SBATCH --job-name=r_demo
+#SBATCH --account=malaria                  # your project (required)
+#SBATCH --qos=debug
+#SBATCH --time=00:10:00
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=2G
+#SBATCH --output=%x_%j.out
 
-# Print a custom message to the output file
-echo "This is a demo job running on the cluster!"
+module load gnu12 R/4.2.1
+
+Rscript -e 'cat("Hello from R", R.version.string, "\n")'
 ```
 
-### How to Use:
-- Save this script as `echo_message.sh`.
-- Submit the script using `sbatch echo_message.sh`.
-- The message "This is a demo job running on the cluster!" will appear in the `echo_message.out` file.
+To run your own R script, replace the last line with `Rscript /projects/malaria/scripts/my_analysis.R`.
+
+### How to use {#how-to-use-3}
+
+- Save the script as `run_r_demo.sh` and submit it with `sbatch run_r_demo.sh`.
+- `r_demo_<jobid>.out` should contain `Hello from R` and the R version.
 
 ---
+
+## Running a simple shell command {#running-a-simple-shell-command}
+
+The simplest possible job, to check that you can submit and that the output is written.
+
+### Script: `echo_message.sh` {#script-echo_messagesh}
+
+```bash
+#!/bin/bash
+#SBATCH --job-name=echo_message
+#SBATCH --account=malaria                  # your project (required)
+#SBATCH --qos=debug
+#SBATCH --time=00:02:00
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=500M
+#SBATCH --output=%x_%j.out
+
+echo "This is a demo job running on $(hostname)"
+```
+
+### How to use {#how-to-use-4}
+
+- Save the script as `echo_message.sh` and submit it with `sbatch echo_message.sh`.
+- The message appears in `echo_message_<jobid>.out`.
+
+---
+
+## Next steps {#next-steps}
+
+Once these work, move on to a real analysis with the [IGH job script template](job-scripts.md) or [hpcsub](hpcsub.md). If a job fails, see [Troubleshooting](troubleshooting.md). The full list of software is in [Installed software](../../software/installed.md).

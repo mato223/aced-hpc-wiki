@@ -1,196 +1,154 @@
 ---
+title: File System Best Practices
 sidebar_position: 3
 sidebar_label: "File System Practices"
 ---
-# File System Best Practices
 
-The ACE cluster provides shared file systems that serve all users. Misusing storage can cause job failures, slow performance for everyone, and fill up critical system resources. Follow these guidelines to be a good citizen.
+All users share the same storage. Putting files in the wrong place, copying them the wrong way or duplicating data slows everyone down and can make your colleagues lose access to your files. The storage spaces themselves are described in [Storage systems](../hardware/storage.md).
 
-## Understanding Your Storage Areas
+## Where to put what {#where-to-put-what}
 
-| File System | Purpose | Default Quota | Max Quota |
-|-------------|---------|---------------|-----------|
-| `$HOME` | Scripts, configs, software, datasets, job output | 50 GB | 200 GB |
+| What | Where | Why |
+|------|-------|-----|
+| Scripts, configuration files | `$HOME` or `/projects/<project>/scripts` | Backed up; `scripts/` is shared with the team (git recommended) |
+| Running computations, large temporary files | `/scratch/<project>/<login>` | Fast SSDs; **not backed up**, purged after <Var name="scratchPurgeDays" /> days without use |
+| Intermediate files you may need again | `/projects/<project>/work/` | Shared, but **not backed up** |
+| Results to keep | `/projects/<project>/results/<login>/` | Backed up, visible to the team |
+| Job logs | `/projects/<project>/results/slurm_logs/` | Visible to the team for troubleshooting |
+| Files to share with other members | `/projects/<project>/shared/` | Writable by project and sub-project members |
+| Raw sequencing data | `/projects/<project>/data/raw/` (shortcuts) | Read-only: read them in place |
+| Reference genomes and databases | `/references/<tool>/<version>` | Read-only: never copy them |
 
-### Home Directory (`$HOME`)
+For sub-projects, replace `/projects/<project>` with `/projects/<project>/<sub-project>` and `/scratch/<project>/<login>` with `/scratch/<project>/<sub-project>/<login>`. See [Projects, sub-projects and roles](../getting-started/projects.md).
 
-Your home directory is your primary workspace on ACE HPC. It is for:
-- Configuration files (`.bashrc`, `.profile`)
-- Scripts and source code
-- Personal settings
-- Software installations (`~/.local/`)
-- Datasets and job input/output (within quota)
+## Copying files into a project {#copying-into-a-project}
 
-Organise your work into subdirectories to keep things manageable:
+In a project directory, new files automatically belong to the project and can be modified by the whole team. **Copying while keeping the original permissions cancels this rule**: your colleagues may then get `Permission denied` on your files.
 
 ```bash
-$HOME/
-├── projects/       # research projects
-│   └── my_project/
-│       ├── data/
-│       ├── scripts/
-│       └── results/
-├── jobs/           # SLURM job output logs
-└── software/       # locally compiled tools
+# USE: these commands apply the project's permissions
+cp -r my_folder /projects/malaria/results/<login>/
+rsync -rlt my_folder /projects/malaria/results/<login>/
+
+# AVOID: these keep the original owner group and permissions
+cp -p ...
+cp -a ...
+rsync -a ...
+mv ~/my_folder /projects/malaria/...  # moving from your home keeps the old permissions
 ```
 
-:::warning Monitor your quota
-Your home directory has a **50 GB** default quota. Exceeding this causes job failures and may prevent login. Check your usage regularly with `du -sh $HOME` and clean up files you no longer need.
+If a colleague gets `Permission denied` on files you copied, give the group back its rights:
+
+```bash
+chmod -R g+rwX /projects/malaria/my_folder
+```
+
+### Check your projects {#check-your-projects}
+
+```bash
+# The projects (groups) you belong to
+groups
+id
+```
+
+After being added to a project, **log out and log in again** so that the new access is taken into account.
+
+## Raw data and references {#raw-data-and-references}
+
+- **Never copy or modify raw data.** `data/raw/` contains shortcuts (links) to the sequencer runs: read the files directly from there. Note that `cp -a` or `rsync -a` on a shortcut copies the link, not the data.
+- **Never download your own copy of a shared database.** Use the versioned copy under `/references`, for example:
+
+```bash
+kraken2 --db /references/kraken2/2026-11 --threads $SLURM_CPUS_PER_TASK sample.fastq
+```
+
+If a database or version is missing, ask for it through a ticket on <Var name="supportPortal" link />.
+
+## Working in scratch {#scratch}
+
+A typical analysis:
+
+1. reads its input from `data/raw/` or `/references`;
+2. writes its large temporary files to `/scratch/<project>/<login>`;
+3. copies the final results to `/projects/<project>/results/<login>/`;
+4. deletes what is no longer needed in scratch.
+
+:::warning Scratch is purged
+Files not used for <Var name="scratchPurgeDays" /> days are deleted automatically (with <Var name="scratchNoticeDays" /> days' notice) and **cannot be recovered**. Never leave your only copy of a result in scratch.
 :::
 
-## Storage Quotas
+Do not use `/tmp` on the compute nodes for large files: it lives in memory (see [Node-local /tmp](../hardware/storage.md#node-tmp)).
 
-### User Home Directories
+## Keeping usage reasonable {#keeping-usage-reasonable}
 
-| Quota Type | Allocation |
-|------------|-----------|
-| Default | 50 GB |
-| Maximum (with approved request) | 200 GB |
+Space used is monitored per user and per project. Please:
 
-### Project Directories
-
-Project storage is available for groups with larger data requirements:
-
-| Quota Type | Allocation |
-|------------|-----------|
-| Default | 1 TB |
-| Maximum (with approved request) | 5 TB |
-
-To request a project directory, contact [support@ace-bioinformatics.org](mailto:support@ace-bioinformatics.org) with a justification for the storage requirement, the project details, estimated data sizes, and the duration for which the storage is needed.
-
-### Requesting Additional Storage
-
-If your work requires more than the default quota, submit a request to [support@ace-bioinformatics.org](mailto:support@ace-bioinformatics.org) including:
-
-- Justification for the additional storage requirement
-- Project details and estimated data sizes
-- Duration for which the additional storage is needed
-
-Requests are reviewed by the HPC administration team and forwarded to the Centre Director for final approval. You will be notified of the decision within two weeks.
-
-## Checking Your Quota
-
-Monitor your storage usage regularly. You will receive an alert when your usage reaches 90% of your quota:
+- clean up `work/` and your scratch space regularly;
+- avoid keeping several copies of the same data;
+- compress or archive results you no longer use actively.
 
 ```bash
-# Check your quota and current usage
-quota -s
+# Size of your directories
+du -sh /projects/malaria/results/<login> /scratch/malaria/<login>
 
-# Check disk usage in current directory
-du -sh *
+# Your 20 largest files and folders in scratch
+du -ah /scratch/malaria/<login> | sort -rh | head -20
 
-# Find large files in your home directory
-du -ah $HOME | sort -rh | head -20
+# Archive a finished analysis
+tar -czf old_analysis.tar.gz old_analysis/ && rm -rf old_analysis/
 ```
 
-If you exceed your quota, write access will be suspended until you reduce your usage below the allocated limit.
+Old or inactive data may be cleaned up.
 
-## What Happens When You Exceed Quota
+## Avoid many small files {#avoid-small-file-accumulation}
 
-Exceeding your quota causes:
-
-1. **Job failures** - Jobs cannot write output files
-2. **Login issues** - Shell initialization may fail if `$HOME` is full
-3. **Lost work** - Running jobs may crash without saving results
-
-## Best Practices for File Management
-
-### Avoid Small File Accumulation
-
-Storing thousands of small files in a single directory strains the metadata servers:
+Thousands of small files in one directory slow down the shared file system for everyone:
 
 ```bash
-# BAD: Thousands of small files
+# BAD: thousands of small files in one directory
 output/
 ├── result_0001.txt
-├── result_0002.txt
 ├── ... (10,000 files)
 └── result_9999.txt
 
-# BETTER: Organized subdirectories
+# BETTER: organised in subdirectories
 output/
 ├── batch_001/
-│   ├── result_0001.txt
 │   └── ... (100 files)
-├── batch_002/
-│   └── ...
 └── batch_100/
 ```
 
-### Use Efficient File Formats
+Where possible, use formats that group data (compressed FASTQ/BAM/CRAM, HDF5, tar archives) rather than many small text files.
 
-For large datasets, use formats designed for HPC:
+## I/O tips {#io-optimization-tips}
 
-```bash
-# Instead of many small CSV files, consider:
-- HDF5 (.h5)
-- NetCDF (.nc)
-- Parquet files
-- Tar archives
-```
-
-### Clean Up Regularly
-
-```bash
-# Remove old temporary files from your home directory
-find $HOME -name "*.tmp" -mtime +7 -delete
-
-# Archive completed project data to free space
-tar -czvf project_archive.tar.gz project_dir/
-rm -rf project_dir/
-```
-
-### Organise Job Output
-
-Direct job output to a dedicated directory within `$HOME`:
-
-```bash
-#!/bin/bash
-#SBATCH --job-name=my_job
-#SBATCH --output=$HOME/jobs/%j.out
-
-# Create a job-specific working directory
-mkdir -p $HOME/jobs/job_$SLURM_JOB_ID
-cd $HOME/jobs/job_$SLURM_JOB_ID
-
-# Run your computation
-./my_program
-
-# Results stay in $HOME/jobs/job_$SLURM_JOB_ID
-# Clean up when you no longer need them
-```
-
-## I/O Optimization Tips
-
-### Minimize File Operations
+### Minimise file operations {#minimize-file-operations}
 
 ```python
-# BAD: Opening file in a loop
+# BAD: opening the file in a loop
 for i in range(10000):
     with open('output.txt', 'a') as f:
         f.write(f"Result {i}\n")
 
-# GOOD: Open once, write many times
+# GOOD: open once, write many times
 with open('output.txt', 'w') as f:
     for i in range(10000):
         f.write(f"Result {i}\n")
 ```
 
-### Batch Checkpoint Files
-
-Instead of writing checkpoints every iteration:
+### Limit checkpoint files {#batch-checkpoint-files}
 
 ```bash
-# BAD: Checkpoint every step
+# BAD: one checkpoint file per step
 checkpoint_001.dat
 checkpoint_002.dat
 ... (thousands of files)
 
-# GOOD: Checkpoint at intervals, overwrite previous
+# GOOD: checkpoint at intervals, overwrite the previous one
 checkpoint_latest.dat
 checkpoint_backup.dat
 ```
 
-### Avoid Simultaneous Large I/O Jobs
+### Heavy I/O workloads {#avoid-simultaneous-large-io-jobs}
 
-If you plan to run many I/O-intensive jobs simultaneously, contact support first to discuss your workflow.
+If you plan to run many I/O-intensive jobs at the same time, contact support first (<Var name="supportEmail" link />) to discuss your workflow.

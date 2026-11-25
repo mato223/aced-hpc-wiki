@@ -9,15 +9,15 @@ sidebar_label: "Advanced Build Topics"
 
 This tutorial covers two techniques that become important as you move beyond basic Dockerfiles: **multi-stage builds** for producing smaller images and **multi-architecture builds** for supporting different CPU architectures.
 
-## Multi-Stage Builds
+## Multi-Stage Builds {#multi-stage-builds}
 
-### The Problem
+### The Problem {#the-problem}
 
 When you build a container that compiles code or installs packages from source, the build tools (compilers, headers, development libraries) end up in the final image even though they're only needed during the build. This bloats your image.
 
 Consider our Monte Carlo example from the previous tutorial. The `python:3.11-slim` base image is ~125 MB, but after adding `build-essential` for compiling numpy, the image grows significantly. Those compilers serve no purpose at runtime — they just waste disk space and increase pull times on the cluster.
 
-### The Concept
+### The Concept {#the-concept}
 
 Multi-stage builds (introduced in Docker 17.06) solve this by letting you use multiple `FROM` statements in a single Dockerfile. Each `FROM` begins a new build stage. You can copy artifacts from earlier stages into later ones, leaving the build tools behind.
 
@@ -38,7 +38,7 @@ Multi-stage builds (introduced in Docker 17.06) solve this by letting you use mu
 
 The key instruction is `COPY --from=<stage>`, which copies files from a named stage instead of from the build context.
 
-### The Example
+### The Example {#the-example}
 
 Let's rebuild our Monte Carlo simulation with a multi-stage approach. We'll add `scipy` to the requirements so there's a meaningful amount of compiled code to separate.
 
@@ -215,17 +215,17 @@ This gives you a shell in the builder stage so you can inspect what was installe
 
 ---
 
-## Multi-Architecture Builds
+## Multi-Architecture Builds {#multi-architecture-builds}
 
-### The Problem
+### The Problem {#the-problem-1}
 
 Container images are built for a specific CPU architecture. An image built on an Intel/AMD laptop (linux/amd64) won't run on an ARM-based Mac (linux/arm64), or on other architectures found in some HPC clusters.
 
-If you build on a Mac with Apple Silicon, the image defaults to `linux/arm64`. ACE HPC nodes use `linux/amd64`, the container either fails or runs under slow emulation.
+If you build on a Mac with Apple Silicon, the image defaults to `linux/arm64`. The compute nodes of <Var name="clusterName" /> (AMD EPYC processors) use `linux/amd64`: an `arm64` image fails to run there (`exec format error`).
 
-### The Concept
+### The Concept {#the-concept-1}
 
-Multi-architecture builds create a single image tag that contains variants for multiple architectures. When someone pulls the image, Docker or Apptainer automatically selects the correct variant for their platform. This is handled by `docker buildx`, which uses QEMU emulation to build for architectures other than your host.
+Multi-architecture builds create a single image tag that contains variants for multiple architectures. When someone pulls the image, Docker or Charliecloud automatically selects the correct variant for their platform. This is handled by `docker buildx`, which uses QEMU emulation to build for architectures other than your host.
 
 ```
                      yourusername/monte-carlo:0.2
@@ -236,7 +236,7 @@ Multi-architecture builds create a single image tag that contains variants for m
            (Intel)     (Apple M-series)   (POWER)
 ```
 
-### Prerequisites
+### Prerequisites {#prerequisites}
 
 - **Docker Desktop** (Mac/Windows): Includes `buildx` and QEMU emulation out of the box.
 - **Docker Engine on Linux**: You may need to install QEMU separately:
@@ -244,7 +244,7 @@ Multi-architecture builds create a single image tag that contains variants for m
   $ docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
   ```
 
-### The Example
+### The Example {#the-example-1}
 
 We'll take the same Monte Carlo simulation and build it for both `linux/amd64` and `linux/arm64`.
 
@@ -257,8 +257,6 @@ $ docker buildx ls
 # Create a new builder with multi-platform support
 $ docker buildx create --name multiplatform --bootstrap --use
 ```
-
-<!-- TODO: Add a screenshot showing the output of `docker buildx ls` with the new builder -->
 
 Now build for a single target platform to test:
 
@@ -296,21 +294,20 @@ $ docker buildx imagetools inspect yourusername/monte-carlo:0.2
 
 This shows the available platforms under that tag.
 
-### Considerations
+### Considerations {#considerations}
 
 **Build time:** Building for a non-native architecture is slower because it runs under QEMU emulation. A build that takes 2 minutes natively may take 10–15 minutes under emulation.
 
 **Base image support:** Your base image must support all the target architectures. Most official images (`python`, `ubuntu`, `alpine`) support both `amd64` and `arm64`. Check the image's page on Docker Hub to see its supported architectures.
 
-**Apptainer on ACE HPC:** When you pull a multi-arch image with Apptainer, it automatically selects the architecture matching the cluster's hardware:
+**Charliecloud on IGH HPC:** When you pull a multi-architecture image with `ch-image`, it selects the variant matching the node's hardware (`linux/amd64`). As always, pull inside a job, not on the login node (see [Containers on HPC clusters](containers-hpc.md#pulling-an-image)):
 
 ```bash
-$ module load apptainer
-$ apptainer pull docker://yourusername/monte-carlo:0.2
-# Automatically pulls the linux/amd64 variant on x86_64 nodes
+module load charliecloud/0.44
+ch-image pull yourusername/monte-carlo:0.2       # pulls the linux/amd64 variant
 ```
 
-### Automating with GitHub Actions
+### Automating with GitHub Actions {#automating-with-github-actions}
 
 For production workflows, you can automate multi-architecture builds with GitHub Actions so that every push to your repository builds and pushes images for all platforms:
 
@@ -351,6 +348,6 @@ Store your Docker Hub credentials as GitHub repository secrets (`DOCKERHUB_USERN
 
 ---
 
-**Next:** [Containers on HPC Clusters](containers-hpc) — pull your images on ACE HPC with Apptainer, write SLURM job scripts, and run MPI and GPU workloads.
+**See also:** [Containers on HPC clusters](containers-hpc.md) — run your images on <Var name="clusterName" /> with Charliecloud and Slurm.
 
 **References:** [Docker Multi-stage Builds](https://docs.docker.com/build/building/multi-stage/) | [Docker Buildx](https://docs.docker.com/build/building/multi-platform/) | [QEMU User Emulation](https://github.com/multiarch/qemu-user-static)

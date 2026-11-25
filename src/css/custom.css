@@ -4,23 +4,24 @@
  * Brand colours live ONLY in the variables below. To rebrand, change
  * --igh-brand / --igh-accent (and their dark-mode counterparts);
  * every link, button, sidebar and TOC highlight follows automatically.
- * TODO: replace with the official IGH brand palette.
+ * Palette sampled from the official IGH logo (static/img/igh-logo-original.jpeg):
+ * navy #184068 and gold #D09830.
  */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --igh-brand: #0b4f6c;
-  --igh-accent: #1f9e89;
-  --igh-hero-from: #0b4f6c;
-  --igh-hero-to: #0f6e74;
+  --igh-brand: #184068;
+  --igh-accent: #d09830;
+  --igh-hero-from: #184068;
+  --igh-hero-to: #0e2a47;
 
-  --ifm-color-primary: #0b4f6c;
-  --ifm-color-primary-dark: #0a4761;
-  --ifm-color-primary-darker: #09435c;
-  --ifm-color-primary-darkest: #08374b;
-  --ifm-color-primary-light: #0c5777;
-  --ifm-color-primary-lighter: #0d5b7c;
-  --ifm-color-primary-lightest: #0f678d;
+  --ifm-color-primary: #184068;
+  --ifm-color-primary-dark: #163a5e;
+  --ifm-color-primary-darker: #143758;
+  --ifm-color-primary-darkest: #112d49;
+  --ifm-color-primary-light: #1a4672;
+  --ifm-color-primary-lighter: #1b4978;
+  --ifm-color-primary-lightest: #1f538a;
 
   --ifm-font-family-base: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --ifm-font-family-monospace: 'JetBrains Mono', SFMono-Regular, Menlo, Consolas, monospace;
@@ -31,18 +32,18 @@
 }
 
 [data-theme='dark'] {
-  --igh-brand: #5fc2e6;
-  --igh-accent: #5fd3b5;
-  --igh-hero-from: #062c3d;
-  --igh-hero-to: #08404a;
+  --igh-brand: #8fb4e0;
+  --igh-accent: #e2b45a;
+  --igh-hero-from: #0f2a47;
+  --igh-hero-to: #0a1d33;
 
-  --ifm-color-primary: #5fc2e6;
-  --ifm-color-primary-dark: #44b7e1;
-  --ifm-color-primary-darker: #36b2df;
-  --ifm-color-primary-darkest: #1f97c3;
-  --ifm-color-primary-light: #7acdeb;
-  --ifm-color-primary-lighter: #88d2ed;
-  --ifm-color-primary-lightest: #b0e1f3;
+  --ifm-color-primary: #8fb4e0;
+  --ifm-color-primary-dark: #74a2d8;
+  --ifm-color-primary-darker: #6799d4;
+  --ifm-color-primary-darkest: #3f7ec9;
+  --ifm-color-primary-light: #aac6e8;
+  --ifm-color-primary-lighter: #b7cfec;
+  --ifm-color-primary-lightest: #dde8f6;
   --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.08);
 }
 
@@ -70,6 +71,12 @@
 /* Terminal-style code blocks get a little more breathing room */
 .theme-code-block {
   --ifm-pre-padding: 1rem;
+}
+
+/* The logo has a white background: keep it on a white disc so it reads in dark mode too */
+.navbar__logo img {
+  background: #fff;
+  border-radius: 50%;
 }
 
 /* GitHub icon in navbar (no text label) */

@@ -1,53 +1,70 @@
 ---
 id: connecting
-title: Connecting to the Cluster
-sidebar_position: 2
-sidebar_label: "Connecting to the Cluster"
+title: Connecting to the cluster
+sidebar_label: "Connecting to the cluster"
+sidebar_position: 3
 ---
 
-This guide explains how to connect to the ACE HPC Cluster using SSH.
+# Connecting to the cluster {#connecting-to-the-cluster}
 
-### Prerequisites
-- An active ACE HPC account.
-- An SSH client (e.g., OpenSSH on Linux/Mac, PuTTY on Windows).
+You connect to the IGH HPC with **SSH** to the login node, <Var name="loginHost" code />.
 
-### Login Nodes
-- Primary login Node: `biocompace.ace.ac.ug`
+## Before you connect {#before-you-connect}
 
-### Connecting via SSH
-1. Open a terminal or SSH client.
-2. Use the following command (replace `username` with your actual username):
-- Primary login Node:
-   ```bash
-   ssh <username>@biocompace.ace.ac.ug
-   ```
-2. Enter your password when prompted.
+- Your IGH institutional account has access to the cluster and you are a member of at least one project. See [Getting access](accounts.md).
+- An SSH client:
+  - **Linux and macOS:** the `ssh` command in a terminal.
+  - **Windows 10/11:** the `ssh` command in PowerShell or Windows Terminal (OpenSSH is included), or a client such as PuTTY or MobaXterm.
+- You are on the **institute network**.
 
+:::warning[Institute network only]
+The cluster can only be reached **from the IGH institute network**. There is currently no access from outside the institute.
+:::
 
-## Connecting to the ACE HPC Cluster off-site
-This guide provides instructions for users to connect to the African Centre of Excellence in Bioinformatics and Data Intensive Sciences (ACE) High Performance Computing (HPC) Cluster from off-site. Follow the steps below to establish a secure connection.
+## Connect with SSH {#connect-with-ssh}
 
-### Prerequisites
-- An active ACE HPC account with a username and password.
-- A computer with an SSH client installed (e.g., OpenSSH on Linux/Mac, or PuTTY on Windows).
-- EduVPN client installed on your machine from the App Store for Mac and from the [EduVPN site](https://www.eduvpn.org/client-apps/) for Windows and Linux users.
+Replace `<login>` with your IGH login:
 
-### Connect to the ACE Network Using EduVPN
-To access the ACE HPC Cluster from off-site, users must first connect to the ACE network using EduVPN. Follow these steps:
+```bash
+ssh <login>@acegid-hpc-01
+```
 
-1. **Launch EduVPN and Select Your Institution**  
-   Open the EduVPN application and select "African Centre of Excellence in Bioinformatics" as the institution from the list.
+Then enter your institutional credentials when prompted. The first time you connect, SSH asks you to confirm the host key: answer `yes`.
 
-2. **Authenticate with Your Credentials**  
-   Log in using the same credentials for your HPC account. Once authenticated, the EduVPN client will establish a secure connection to the ACE network.
+With PuTTY or MobaXterm, use <Var name="loginHost" code /> as host name, port 22, and your IGH login as user name.
 
-### Connect to the ACE HPC Cluster via SSH
-After successfully connecting to the ACE network through EduVPN, users can access the HPC cluster using SSH. Follow these steps:
+### Optional: a shortcut {#ssh-shortcut}
 
-1. **Open a Terminal**  
-   Launch a terminal application on your computer. For Windows users, this could be a tool like PuTTY or the Windows Subsystem for Linux (WSL) terminal. For Mac and Linux users, the default terminal application will suffice.
+On Linux, macOS or Windows (OpenSSH), you can add an entry to `~/.ssh/config` so that `ssh igh` is enough:
 
-2. **Enter the SSH Command**  
-   In the terminal, enter the following command to connect to the ACE HPC Cluster:  
-   ```bash
-   ssh <username>@biocompace.ace.ac.ug
+```text
+Host igh
+    HostName acegid-hpc-01
+    User <login>
+```
+
+## What to do on the login node {#what-to-do-on-the-login-node}
+
+The login node is shared by everyone. Use it to edit files, transfer data, do small compilations and submit jobs. **Do not run any computation on it**: send it to the compute nodes with Slurm. See [Login node good practice](../good-conduct/login-nodes.md).
+
+## After being added to a project {#after-being-added-to-a-project}
+
+A new project membership only takes effect in a **new session**. If you were connected when you were added, log out (`exit`) and connect again, then check with `groups`.
+
+## Transferring files {#transferring-files}
+
+Use `scp`, `rsync` or `sftp` to the login node, from the institute network. See [File transfers](../good-conduct/file-transfers.md).
+
+## Connection problems {#connection-problems}
+
+| Symptom | Likely cause |
+|---|---|
+| `Connection timed out` or `Could not resolve hostname` | You are not on the institute network. |
+| `Permission denied` at login | Wrong login or credentials, or your access has not been granted yet. |
+| `Permission denied` on a project folder after login | Your new project membership is not active yet: log out and log in again. |
+
+To see where the connection fails, run `ssh -v <login>@acegid-hpc-01` and include its output in your [support request](../support/contact.md).
+
+## Next step {#next-step}
+
+[Run your first job](first-job.md).

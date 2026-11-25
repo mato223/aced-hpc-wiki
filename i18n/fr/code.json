@@ -24,19 +24,19 @@
     "message": "Obtenir un compte"
   },
   "home.card.account.text": {
-    "message": "Qui est éligible, comment faire la demande et la suite du processus."
+    "message": "Comment demander l'accès et rejoindre un projet."
   },
   "home.card.connect.title": {
     "message": "Se connecter"
   },
   "home.card.connect.text": {
-    "message": "SSH depuis Linux, macOS ou Windows, clés et transferts de fichiers."
+    "message": "SSH depuis le réseau de l'institut, sous Linux, macOS ou Windows."
   },
   "home.card.jobs.title": {
     "message": "Lancer des jobs"
   },
   "home.card.jobs.text": {
-    "message": "Soumettre, suivre et dépanner des jobs Slurm, y compris sur GPU."
+    "message": "Soumettre, suivre et dépanner des jobs Slurm avec le compte de votre projet."
   },
   "home.card.software.title": {
     "message": "Logiciels"
@@ -48,7 +48,7 @@
     "message": "Matériel et stockage"
   },
   "home.card.hardware.text": {
-    "message": "Nœuds de calcul, GPU, systèmes de fichiers et quotas."
+    "message": "Nœuds de calcul, espaces projet, scratch et références partagées."
   },
   "home.card.support.title": {
     "message": "Obtenir de l'aide"

@@ -18,7 +18,7 @@ const config = {
   title: `${site.instituteShort} HPC Wiki`,
   tagline:
     'Documentation for the High Performance Computing cluster of the Institute of Genomics and Global Health',
-  favicon: 'img/favicon.svg',
+  favicon: 'img/igh-favicon.png',
 
   // TODO: set to the production URL once hosting is decided.
   url: 'https://hpc-wiki.example.org',
@@ -100,7 +100,7 @@ const config = {
         title: `${site.instituteShort} HPC Wiki`,
         logo: {
           alt: `${site.instituteShort} logo`,
-          src: 'img/logo.svg',
+          src: 'img/igh-logo.png',
         },
         hideOnScroll: false,
         items: [

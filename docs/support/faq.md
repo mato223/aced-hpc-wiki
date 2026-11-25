@@ -1,276 +1,166 @@
 ---
 id: faq
-title: Frequently Asked Questions
+title: Frequently asked questions
+sidebar_label: "FAQ"
 sidebar_position: 1
-sidebar_label: "FAQs"
 ---
 
-# Frequently Asked Questions
+# Frequently asked questions {#frequently-asked-questions}
 
-## Accounts and Access
+## Access and projects {#access-and-projects}
 
-**Q: How do I reset my password?**
-A: Email [support@ace-bioinformatics.org](mailto:support@ace-bioinformatics.org) with your username and request a password reset. You will receive a temporary password with instructions to set a new one.
+**How do I get access to the cluster?**
+Open a ticket on <Var name="supportPortal" link /> explaining why you need the HPC and which project(s) you work on. You log in with your IGH institutional account. See [Getting access](../getting-started/accounts.md).
 
-**Q: I can't SSH into the cluster. What should I check?**
-A: Work through these steps in order:
+**I cannot connect with SSH. What should I check?**
 
-1. Verify you're using the correct hostname and username.
-2. Check that you're on a network that can reach the cluster (some institutions require VPN).
-3. Make sure your account is active — new accounts require completing the Linux/SLURM quiz.
-4. Try `ssh -v user@hostname` for verbose output that reveals where the connection fails.
-5. If you still can't connect, email support with the verbose SSH output.
+1. You are on the **institute network**: the cluster is not reachable from outside.
+2. You use the right host name, <Var name="loginHost" code />, and your IGH login.
+3. Your access has been granted (you received an answer to your ticket).
+4. Run `ssh -v <login>@acegid-hpc-01` and send the output to support if it still fails.
 
-**Q: Can I increase my storage quota?**
-A: Yes. Email [support@ace-bioinformatics.org](mailto:support@ace-bioinformatics.org) with your username, current usage, how much additional space you need, and a brief justification. Check your current usage with `quota -s` or `df -h ~`.
+**I was added to a project but I get `Permission denied` on its folder.**
+Log out and log in again: a new project membership only takes effect in a new session. Then check with `groups`.
+
+**How do I join another project or sub-project?**
+Open a ticket naming the project. The project admin validates the request. See [Projects, sub-projects and roles](../getting-started/projects.md).
+
+**A colleague cannot modify files I copied into the project.**
+The files kept their original permissions (`cp -a`, `cp -p`, `rsync -a` or `mv` from your home). Fix them with `chmod -R g+rwX` on the folder, and copy with `cp -r` or `rsync -rlt` next time. See [File permissions in a project](../getting-started/projects.md#file-permissions).
 
 ---
 
-## Jobs and Scheduling
+## Jobs and Slurm {#jobs-and-slurm}
 
-**Q: Why is my job stuck in the pending state?**
-A: Common reasons include:
-
-- **Resources unavailable** — all nodes matching your request are in use. Try reducing `--nodes`, `--ntasks`, `--mem`, or `--time`.
-- **Priority** — other jobs submitted earlier or by higher-priority accounts are ahead in the queue.
-- **Partition limits** — you may have exceeded the maximum number of concurrent jobs or total resource allocation for your partition.
-
-Check the reason with:
+**Which account should I put in my job?**
+Your project's Slurm account, for example `#SBATCH --account=malaria`, or `malaria_<sub-project>` for a sub-project. It is required. List yours with:
 
 ```bash
-squeue -u $USER -o "%.18i %.9P %.8j %.8u %.2t %.10M %.6D %R"
+sacctmgr show assoc user=$USER format=account,qos
 ```
 
-The last column (`NODELIST(REASON)`) tells you why the job is waiting (e.g., `Priority`, `Resources`, `QOSMaxJobsPerUserLimit`).
+**Which QOS should I use?**
 
-**Q: My job was killed unexpectedly. How do I find out why?**
-A: Start with these commands:
+| QOS | For | Maximum time |
+|---|---|---|
+| `normal` (default) | Most jobs | <Var name="qosNormalMaxDays" /> days |
+| `debug` | Quick tests, starts faster | <Var name="qosDebugMaxHours" /> hour |
+| `long` | Long jobs, on request (ticket) | <Var name="qosLongMaxDays" /> days |
+| `urgent` | Granted temporarily for a deadline | <Var name="qosUrgentMaxDays" /> days |
+
+These limits may change. A job that exceeds a limit is refused at submission with a message. See [Slurm basics](../tutorials/running-jobs/slurm-basics.md).
+
+**Why is my job pending?**
+Look at the last column (`NODELIST(REASON)`):
 
 ```bash
-# Check job exit status
+squeue --me
+```
+
+`Resources` means the nodes are busy; `Priority` means other jobs are ahead of yours; a `QOS...Limit` reason means you have reached a limit of your QOS (for example the number of running jobs on `debug`). Smaller, realistic requests (`--time`, `--mem`, `--cpus-per-task`) start sooner.
+
+**My job stopped. How do I find out why?**
+
+```bash
 sacct -j <jobid> --format=JobID,JobName,State,ExitCode,MaxRSS,Elapsed,Timelimit
-
-# Review job output files
-cat slurm-<jobid>.out
-cat slurm-<jobid>.err
+seff <jobid>
 ```
 
-Common causes:
-- **OOM (Out of Memory)** — the job exceeded its memory allocation. Look for `oom_kill` in the output. Increase `--mem`.
-- **Timeout** — the job exceeded its `--time` limit. The `State` will show `TIMEOUT`. Request more time or optimize your workflow.
-- **Node failure** — rare, but hardware issues can kill jobs. The `State` will show `NODE_FAIL`. Resubmit the job.
+- `OUT_OF_MEMORY` or `oom_kill` in the log: the job needed more than `--mem`. Increase it.
+- `TIMEOUT`: the job reached its `--time`. Ask for more time, or split the work into steps.
+- `FAILED`: read the `.err` file of the job.
 
-**Q: How do I request the right amount of memory for my job?**
-A: If you're unsure, run a test job with a generous memory request and a small dataset. Then check actual usage:
+**How much memory should I ask for?**
+Run a test on a small dataset, then look at `MaxRSS` in `sacct` or at `seff <jobid>`, and ask for about 20% more. **Always set `--mem`**: without it, the job reserves a whole node's memory. Remember that reserving a lot of memory also takes CPUs away from others: 500 GB with 8 CPUs occupies a whole node.
 
-```bash
-sacct -j <jobid> --format=JobID,MaxRSS,ReqMem
-```
-
-`MaxRSS` shows peak memory used. Request about 20% more than that for your production run to allow for variability across datasets.
-
-**Q: What is the difference between `sbatch`, `srun`, and `salloc`?**
-A:
-
-| Command | Purpose | Use when... |
-|---------|---------|-------------|
-| `sbatch` | Submit a batch job script to the queue | You want the job to run unattended |
-| `srun` | Launch a job step (often inside a batch script) | You need to run a parallel task within an allocation |
-| `salloc` | Request an interactive allocation | You need to test commands, debug, or run interactive tools |
-
-**Q: Should I run anything on the login node?**
-A: Login nodes are shared by all users and should only be used for:
-
-- Editing files and scripts
-- Submitting and monitoring jobs (`sbatch`, `squeue`, `scancel`)
-- Small file operations and transfers
-- Compiling code (short compilations only)
-
-**Never** run compute-intensive tasks, large data processing, or long-running programs on the login node. Use `sbatch` for batch work or `salloc` for interactive computing.
-
-**Q: How do I run an interactive session?**
-A: Use `salloc` to request resources, then run commands on the allocated compute node:
+**How do I use several CPUs?**
+Ask for them with `--cpus-per-task` and **tell your software to use the same number**:
 
 ```bash
-salloc --ntasks=1 --mem=4G --time=02:00:00
-# Once allocated, you'll be on a compute node
-# Run your commands here
-# Type 'exit' when done to release resources
-```
-
-This is useful for testing scripts, debugging, and running tools that need interactive input.
-
-**Q: How do I cancel a job?**
-A: Use `scancel`:
-
-```bash
-scancel <jobid>            # Cancel a specific job
-scancel -u $USER           # Cancel all your jobs
-scancel -n <job_name>      # Cancel jobs by name
-```
-
-**Q: How do I use multiple CPUs or nodes?**
-A: Add the appropriate directives to your job script:
-
-```bash
-# Multiple cores on a single node (shared-memory parallelism)
-#SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-
-# Multiple tasks across nodes (distributed parallelism with MPI)
-#SBATCH --ntasks=16
-#SBATCH --nodes=2
-
-module load openmpi
-mpirun ./my_program
+bwa mem -t $SLURM_CPUS_PER_TASK ...
 ```
 
-Make sure your code actually supports the type of parallelism you're requesting. Using `--ntasks=16` has no benefit if your program is single-threaded.
+On our nodes, 1 physical core = 2 Slurm CPUs (hyperthreading). See [Job submission good practice](../good-conduct/job-submission.md).
+
+**Can I run things on the login node?**
+Only light work: editing, file transfers, small compilations, submitting and monitoring jobs. Everything else goes through Slurm. See [Login node good practice](../good-conduct/login-nodes.md).
+
+**How do I get an interactive session?**
+
+```bash
+salloc --account=malaria --qos=debug --cpus-per-task=2 --mem=4G --time=00:30:00
+```
+
+Type `exit` when you are done to release the resources.
+
+**How do I cancel a job?**
+
+```bash
+scancel <jobid>            # one job
+scancel -u $USER           # all your jobs
+```
 
 ---
 
-## Software and Environment
+## Software {#software}
 
-**Q: How do I find and load software?**
-A: The cluster uses the Lmod module system:
+**How do I find and load software?**
 
 ```bash
-module avail              # List all available modules
-module spider <name>      # Search for a specific package
-module load <name>        # Load a module
-module list               # Show currently loaded modules
-module unload <name>      # Unload a module
-module purge              # Unload all modules
+module avail               # modules available now
+module spider <name>       # search all modules
+module load gnu12 R/4.2.1  # load R (needs the gnu12 compiler module)
+module list                # loaded modules
 ```
 
-Always load the modules you need in your job script so the environment is reproducible.
+See [Installed software](../software/installed.md) and [Modules](../software/modules.md).
 
-**Q: My Python/R script fails to import a library. What's wrong?**
-A: The system Python/R may not have your required libraries. Best practices:
+**Where are the bioinformatics tools?**
+There are no bioinformatics modules yet. Install them with conda (`module load anaconda/2025.06`) in your home, or in `/projects/<project>/` to share them with your team, or ask for them by ticket. See [Installing your own software](../software/custom-install.md).
 
-- **Python:** Create a virtual environment or conda environment in your home directory:
-  ```bash
-  module load python
-  python -m venv ~/myenv
-  source ~/myenv/bin/activate
-  pip install <package>
-  ```
-- **R:** Install packages to a user library:
-  ```r
-  install.packages("package_name", lib="~/R/library")
-  ```
+**Can I use containers?**
+Charliecloud is available as a module. Apptainer/Singularity is not available yet. See [Containers on the HPC](../tutorials/containers/containers-hpc.md).
 
-Load the same environment in your job script that you used when installing packages.
-
-**Q: Can I install custom software?**
-A: Yes. You can install software in your home directory or project space using:
-
-- **Conda/Mamba** for Python/R packages and bioinformatics tools
-- **pip with virtual environments** for Python packages
-- **Compiling from source** using `make` or `cmake`
-
-If you need system-wide installation or a new module, email [support@ace-bioinformatics.org](mailto:support@ace-bioinformatics.org).
-
-**Q: My script works on my laptop but fails on the cluster. Why?**
-A: Common reasons:
-
-- **Different software versions** — check with `module list` and `which <program>`. Load the correct modules.
-- **Missing dependencies** — libraries available on your laptop may not be installed on the cluster.
-- **Hardcoded paths** — paths like `/Users/me/data/` don't exist on the cluster. Use relative paths or update to the cluster's file system.
-- **Not running through Slurm** — scripts must be submitted via `sbatch`, not run directly on the login node.
+**My program crashes with `Illegal instruction`.**
+It was probably compiled on the login node with `-march=native`. The login node (Intel) has instructions that the compute nodes (AMD) do not have. Compile inside a job on a compute node, or use `-march=znver3`. See [Troubleshooting](../tutorials/running-jobs/troubleshooting.md).
 
 ---
 
-## Files and Storage
+## Files and storage {#files-and-storage}
 
-**Q: What's the best way to transfer files to and from the cluster?**
-A: Use `scp` or `rsync`:
+**Where should I put my data?**
+
+| Location | Use | Backed up |
+|---|---|---|
+| `$HOME` | Scripts, configuration | Yes |
+| `/projects/<project>` | Project data and results | Yes, except `work/` |
+| `/scratch/<project>/<login>` | Running computations, big temporary files | No |
+| `/references` | Shared reference genomes and databases (read-only) | — |
+
+See [Storage](../hardware/storage.md).
+
+**Are my files backed up?**
+Home, project folders (except `work/`) and raw sequencing data are backed up. **Scratch is never backed up.** Keep your own copy of anything irreplaceable.
+
+**What happens to files in scratch?**
+Files not used for <Var name="scratchPurgeDays" /> days are deleted automatically, with <Var name="scratchNoticeDays" /> days' notice. Deleted files **cannot be recovered**: copy what you want to keep to `/projects/<project>/results`.
+
+**How do I copy data to the cluster?**
+From the institute network, with `scp`, `rsync` or `sftp`. Into a project folder, use `rsync -rlt` (not `-a`):
 
 ```bash
-# Copy a file to the cluster
-scp myfile.txt user@hpc.example.com:/home/user/
-
-# Sync a directory (only transfers changed files)
-rsync -avz my_project/ user@hpc.example.com:/home/user/my_project/
-
-# Copy results back to your laptop
-scp user@hpc.example.com:/home/user/results.csv ./
+rsync -rlt --progress my_data/ <login>@acegid-hpc-01:/projects/malaria/results/<login>/
 ```
 
-For large datasets, `rsync` is preferred because it can resume interrupted transfers and only copies files that have changed.
+See [File transfers](../good-conduct/file-transfers.md).
 
-**Q: I'm running out of storage. What should I do?**
-A: Check your usage and clean up:
+**I need a reference database (Kraken2, BLAST...).**
+Look in `/references` first. If it is missing, ask for it by ticket rather than downloading your own copy.
+
+**How do I see how much space I use?**
+Storage use is tracked per user and per project. Keep it reasonable: clean `work/` and your scratch, and do not duplicate data. To find large folders:
 
 ```bash
-# Check quota
-quota -s
-
-# Find large files in your home directory
 du -sh ~/* | sort -rh | head -20
-
-# Find large files recursively
-find ~ -size +100M -exec ls -lh {} \;
 ```
-
-Tips for freeing space:
-- Delete intermediate files and old job outputs
-- Compress large files with `gzip` or `tar`
-- Move infrequently used data to an archive location
-- If you genuinely need more space, request a quota increase from support
-
-**Q: What happens to my data if my account expires?**
-A: Data is retained for a limited period after account expiration. Contact support before your account expires to arrange data transfer or account renewal.
-
----
-
-## Monitoring and Troubleshooting
-
-**Q: How do I check cluster availability?**
-A: Use `sinfo` to see partition and node status:
-
-```bash
-sinfo                           # Overview of all partitions
-sinfo -N -l                     # Detailed per-node view
-sinfo -p <partition> -o "%n %t %C %m"  # Specific partition details
-```
-
-Node states: `idle` (available), `alloc` (fully allocated), `mix` (partially allocated), `down` (unavailable).
-
-**Q: How do I monitor a running job?**
-A: Several commands are available:
-
-```bash
-squeue -u $USER                # Check job status
-scontrol show job <jobid>      # Detailed job information
-sacct -j <jobid> --format=JobID,Elapsed,MaxRSS,State  # Resource usage
-```
-
-For real-time monitoring of a running job, you can SSH to the node where your job is running (shown in `squeue` output) and use `top` or `htop`.
-
-**Q: How do I test my job script before a full run?**
-A: Several strategies:
-
-1. **Use a small dataset** — run on a subset of your data with a short time limit.
-2. **Interactive session** — use `salloc` to get a compute node and run commands manually.
-3. **Dry run** — some tools have a `--dry-run` or `--help` flag to validate inputs.
-4. **Short time limit** — submit with `--time=00:10:00` to catch errors early without waiting in the queue.
-
-**Q: How do I run a job array?**
-A: Job arrays submit many similar jobs at once, each with a unique task ID:
-
-```bash
-#!/bin/bash
-#SBATCH --job-name=array_job
-#SBATCH --array=1-100
-#SBATCH --ntasks=1
-#SBATCH --time=01:00:00
-#SBATCH --output=output_%a.out
-
-# Use the task ID to process different input files
-INPUT_FILE="data/sample_${SLURM_ARRAY_TASK_ID}.fastq"
-module load fastqc
-fastqc $INPUT_FILE
-```
-
-You can also limit how many array tasks run simultaneously: `--array=1-100%10` runs at most 10 at a time.

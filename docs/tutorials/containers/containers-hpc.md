@@ -1,238 +1,223 @@
 ---
 id: containers-hpc
 title: Containers on HPC Clusters
-sidebar_position: 3
 sidebar_label: "Containers on HPC Clusters"
+sidebar_position: 3
 ---
 
 # Containers on HPC Clusters
 
-This tutorial covers deploying containers on ACE HPC using Apptainer and SLURM. You'll learn how to pull and run Docker images, write batch job scripts for containerized workloads, and run MPI and GPU jobs inside containers.
+This tutorial shows how to run containers on <Var name="clusterName" /> with **Charliecloud** and Slurm: pulling Docker images, converting them to directory images, running them in batch jobs, accessing your project data, and running MPI programs in containers.
 
-## How Apptainer Differs from Docker
+:::info Available container runtime
+- **Charliecloud 0.44** is available: `module load charliecloud/0.44`.
+- **Apptainer (Singularity): not yet available.**
+- The cluster has no GPUs, so GPU containers do not apply.
+:::
 
-If you've followed the previous tutorials, you've been using Docker on your workstation. Apptainer works differently in a few important ways:
+:::warning Nothing heavy on the login node
+Pull, convert and run containers **inside a job** on a compute node (`srun` for interactive work, `sbatch` for batch jobs). Never on the login node <Var name="loginHost" code />. See [Login node etiquette](../../good-conduct/login-nodes.md).
+:::
 
-| | Docker | Apptainer |
-|-|--------|-----------|
+## How Charliecloud differs from Docker {#how-charliecloud-differs-from-docker}
+
+If you followed the previous tutorials, you used Docker on your workstation. Charliecloud works differently in a few important ways:
+
+| | Docker | Charliecloud |
+|-|--------|--------------|
 | **Privileges** | Requires root (admin) access | Runs as your normal user |
-| **Image format** | Layered images stored in a daemon | Single `.sif` file you can copy and move |
-| **Directory mounts** | Must be explicitly specified with `-v` | Automatically mounts `$HOME`, `$PWD`, and `/tmp` |
-| **User identity** | Runs as root inside the container by default | Runs as *you* — same UID, same permissions |
-| **Where to build** | On your workstation | Pull pre-built images (no `sudo` on HPC) |
+| **Image format** | Layered images stored by a daemon | A plain directory (one folder per image) |
+| **Main commands** | `docker pull`, `docker run` | `ch-image pull`, `ch-convert`, `ch-run` |
+| **Directory mounts** | Explicit, with `-v` | Your home and `/tmp` automatically; others with `-b` |
+| **User identity** | Root inside the container by default | *You* — same user, same permissions |
+| **Where to build** | On your workstation | Pull ready-made images (build on your workstation) |
 
-The key takeaway: you **build** containers with Docker on your workstation (where you have root), then **run** them with Apptainer on the cluster (where you don't).
+The key idea: you **build** images with Docker on your workstation, then **run** them with Charliecloud on the cluster.
 
-## Introduction to Apptainer
+## Charliecloud basics {#introduction-to-charliecloud}
 
-### Loading the Module
+### Loading the module {#loading-the-module}
 
-Apptainer is available as a module on ACE HPC. Start an interactive session on a compute node before working with containers — don't pull or run containers on the login node:
-
-```bash
-# Request an interactive session
-$ salloc --ntasks=1 --mem=4G --time=01:00:00
-
-# Load Apptainer
-$ module load apptainer
-
-# Verify
-$ apptainer --version
-```
-
-### Pulling an Image
-
-Apptainer can pull any Docker image and convert it to its native `.sif` format:
+Start an interactive job on a compute node, then load Charliecloud:
 
 ```bash
-# Pull the Monte Carlo image we built in previous tutorials
-$ apptainer pull docker://yourusername/monte-carlo:0.1
+# Interactive job on a compute node
+srun --account=malaria --qos=debug --cpus-per-task=2 --mem=8G --time=01:00:00 --pty bash
 
-# This creates: monte-carlo_0.1.sif
-$ ls -lh monte-carlo_0.1.sif
+# Load Charliecloud
+module load charliecloud/0.44
+
+# Check
+ch-run --version
 ```
 
-The `.sif` file is a single, portable file containing the entire container. You can copy it, move it, share it — it's just a file.
+### Where images are stored {#where-images-are-stored}
 
-To pull to a specific directory or with a custom filename:
+Charliecloud uses two places:
+
+- **The download cache** of `ch-image` (by default `/var/tmp/$USER.ch` on the node). The compute nodes are stateless: `/var/tmp` lives in the node's memory and does not survive on another node. Treat it as temporary and clean it after converting your image.
+- **Your directory images**, created with `ch-convert`. Keep them in your scratch, for example `/scratch/malaria/$USER/images/`. Scratch files unused for <Var name="scratchPurgeDays" /> days are deleted, but an image can always be pulled again from its registry.
 
 ```bash
-$ mkdir -p ~/containers
-$ apptainer pull ~/containers/monte-carlo.sif docker://yourusername/monte-carlo:0.1
+mkdir -p /scratch/malaria/$USER/images
 ```
 
-:::note Cache management
-Apptainer caches downloaded layers in `~/.apptainer/cache`. This counts toward your `$HOME` quota. Clean the cache regularly if you are pulling many images:
+Do not keep images in your home, and do not store copies of public images in the project directory.
+
+### Pulling an image {#pulling-an-image}
+
+Pull the Monte Carlo image built in the previous tutorial, then convert it to a directory image:
+
 ```bash
-apptainer cache clean
+# Download the image into the ch-image cache
+ch-image pull yourusername/monte-carlo:0.1
+
+# Convert it to a directory image in your scratch
+ch-convert yourusername/monte-carlo:0.1 /scratch/malaria/$USER/images/monte-carlo-0.1
+
+# Free the cache on the node (it uses the node's memory)
+ch-image reset
 ```
-You can check cache size with `apptainer cache list`.
+
+The directory `/scratch/malaria/$USER/images/monte-carlo-0.1` now contains the whole container filesystem. You can reuse it in all your jobs.
+
+:::caution To be confirmed
+Whether the compute nodes can reach Docker Hub and other registries has not been confirmed yet. If `ch-image pull` fails with a network error, use the method below.
 :::
 
-### Running Containers
+### Importing an image without internet access {#importing-an-image-without-internet-access}
 
-:::danger Do not run containers on the head node
-The commands below are for reference only. **Never run `apptainer exec`, `apptainer run`, or `apptainer shell` on the head node for actual compute work.** The head node is a shared login environment — running workloads there degrades it for all users and may result in your session being terminated.
-
-All container execution must be done inside a SLURM job. Use `sbatch` for batch jobs or `salloc` for interactive sessions on a compute node. See the [SLURM Batch Jobs](#slurm-batch-jobs) section below for the correct approach.
-:::
-
-Apptainer has three commands for running containers:
-
-**`apptainer exec`** — Run a specific command inside the container. This is what you'll use most often:
+You can also export the image on your workstation, copy the file to the cluster and convert it there. On your workstation:
 
 ```bash
+docker create --name mc-export monte-carlo:0.1
+docker export mc-export | gzip > monte-carlo-0.1.tar.gz
+docker rm mc-export
+```
+
+Copy `monte-carlo-0.1.tar.gz` to your scratch (see [File transfers](../../good-conduct/file-transfers.md)), then, in a job on the cluster:
+
+```bash
+module load charliecloud/0.44
+ch-convert /scratch/malaria/$USER/monte-carlo-0.1.tar.gz /scratch/malaria/$USER/images/monte-carlo-0.1
+```
+
+`docker export` produces a flattened filesystem, which is what `ch-convert` expects (`docker save` does **not** work). An exported image does not keep the `ENV` settings of the Dockerfile, so give full paths to programs or set variables with `--set-env=VAR=VALUE`.
+
+### Running containers {#running-containers}
+
+`ch-run` runs a command inside a directory image. Everything after `--` is the command:
+
+```bash
+IMG=/scratch/malaria/$USER/images/monte-carlo-0.1
+
 # Run the Monte Carlo simulation
-$ apptainer exec monte-carlo_0.1.sif python /app/estimate_pi.py 5000000
+ch-run --set-env "$IMG" -- python /app/estimate_pi.py 5000000
 
-# Check what Python version is inside the container
-$ apptainer exec monte-carlo_0.1.sif python --version
+# Check the Python version inside the container
+ch-run "$IMG" -- python --version
 
-# List installed packages
-$ apptainer exec monte-carlo_0.1.sif pip list
+# Open a shell inside the container
+ch-run "$IMG" -- /bin/bash
 ```
 
-**`apptainer shell`** — Start an interactive shell inside the container for exploration and debugging:
+- `--set-env` (without a value) applies the environment variables defined in the image (the `ENV` lines of the Dockerfile).
+- Unlike Docker, `ch-run` does not run the image's default command (`CMD`): always give the command explicitly.
+- Inside the container you are still *you*: same user, same permissions. Your home directory is available at `/home/$USER`.
+- The image is read-only. Write your results to a mounted directory (see below), not inside the image.
+
+### Accessing your project data {#accessing-project-data}
+
+Only your home and `/tmp` are mounted automatically. To use `/projects`, `/scratch` or `/references` inside the container, bind them with `-b`. The mount point must exist in the image; with a directory image, simply create it once:
 
 ```bash
-$ apptainer shell monte-carlo_0.1.sif
-Apptainer> python --version
-Apptainer> ls /app/
-Apptainer> cat /etc/os-release
-Apptainer> exit
+IMG=/scratch/malaria/$USER/images/monte-carlo-0.1
+mkdir -p "$IMG/projects" "$IMG/scratch" "$IMG/references"
+
+ch-run -b /projects -b /scratch -b /references --set-env "$IMG" -- \
+    python /app/estimate_pi.py 5000000 --output /projects/malaria/results/$USER/pi.json
 ```
 
-Notice that inside the shell, you're still *you* — your home directory is accessible, your files are there, and you have the same permissions as outside. This is different from Docker, where you'd typically be root.
+Paths are then the same inside and outside the container, and your usual permissions apply. The files you create in the project still belong to the project.
 
-**`apptainer run`** — Execute the container's default command (its `CMD` or `ENTRYPOINT`):
+### Interactive sessions with srun {#interactive-shell-sessions-with-srun}
+
+To explore a container, test commands or debug a failing job, open an interactive job on a compute node, then a shell inside the container:
 
 ```bash
-$ apptainer run monte-carlo_0.1.sif
+srun --account=malaria --qos=debug --cpus-per-task=2 --mem=4G --time=01:00:00 --pty bash
+module load charliecloud/0.44
+ch-run --set-env /scratch/malaria/$USER/images/monte-carlo-0.1 -- /bin/bash
 ```
 
-
-### Interactive Shell Sessions with srun
-
-When you need to explore a container interactively — inspect its filesystem, test commands, or debug a failing job — use `srun` to get an interactive session on a compute node first, then launch `apptainer shell` from there.
-
-```bash
-# Request an interactive session on a compute node
-$ srun --ntasks=1 --cpus-per-task=2 --mem=4G --time=01:00:00 --pty bash
+```
+$ python --version
+$ pip list
+$ ls /app/
+$ python /app/estimate_pi.py 100000
+$ exit
 ```
 
-Once your shell lands on a compute node, load Apptainer and open the container:
+## Slurm batch jobs {#slurm-batch-jobs}
 
-```bash
-$ module load apptainer
-$ apptainer shell ~/containers/monte-carlo.sif
-```
+For real work, write a batch script that requests resources and runs the container, then submit it with `sbatch`.
 
-You'll drop into the container's environment:
+### Example: Monte Carlo batch job {#the-example-monte-carlo-batch-job}
 
-```
-Apptainer> python --version
-Python 3.11.x
-Apptainer> pip list
-Apptainer> ls /app/
-Apptainer> python /app/estimate_pi.py 100000
-Apptainer> exit
-```
-
-If you need a GPU node for interactive debugging:
-
-```bash
-$ srun --ntasks=1 --cpus-per-task=4 --mem=16G --time=01:00:00 \
-     --gres=gpu:1 --partition=gpu --pty bash
-
-# Then inside the compute node:
-$ module load apptainer
-$ apptainer shell --nv ~/containers/gpu-benchmark.sif
-```
-
-:::tip
-`apptainer shell` inherits your home directory and current working directory automatically, so your data and scripts are accessible inside the container without any extra `--bind` flags.
-:::
-
-## SLURM Batch Jobs
-
-On an HPC cluster, you don't run jobs interactively — you write a batch script that specifies the resources you need and the commands to run, then submit it to the scheduler. The scheduler runs your job when resources become available.
-
-### The Example: Monte Carlo Batch Job
-
-Create a file called `monte-carlo.slurm`:
+Create `monte-carlo.slurm`:
 
 ```bash
 #!/bin/bash
 #SBATCH --job-name=monte-carlo
-#SBATCH --output=monte-carlo_%j.out
-#SBATCH --error=monte-carlo_%j.err
+#SBATCH --account=malaria
+#SBATCH --qos=normal
 #SBATCH --time=00:30:00
-#SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=8G
+#SBATCH --output=/projects/malaria/results/slurm_logs/%x_%j.out
+#SBATCH --error=/projects/malaria/results/slurm_logs/%x_%j.err
 
-# Load Apptainer
-module load apptainer
+set -euo pipefail
+module load charliecloud/0.44
 
-# Define paths
-CONTAINER=~/containers/monte-carlo.sif
-OUTPUT_DIR=mc_results_$SLURM_JOB_ID
+IMG=/scratch/malaria/$USER/images/monte-carlo-0.1
+OUTPUT_DIR=/projects/malaria/results/$USER/monte-carlo_$SLURM_JOB_ID
+mkdir -p "$OUTPUT_DIR"
 
-# Create output directory
-mkdir -p $OUTPUT_DIR
+# Give the program the number of CPUs reserved for the job
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 echo "Job $SLURM_JOB_ID started on $(hostname) at $(date)"
-echo "Container: $CONTAINER"
-echo "Output:    $OUTPUT_DIR"
 
-# Run the simulation
-apptainer exec \
-    --bind $OUTPUT_DIR:/output \
-    $CONTAINER python /app/estimate_pi.py 50000000 \
-        --trials 20 \
-        --output /output/results.json
+ch-run -b /projects --set-env "$IMG" -- \
+    python /app/estimate_pi.py 50000000 --output "$OUTPUT_DIR/results.json"
 
 echo "Job completed at $(date)"
-echo "Results:"
-cat $OUTPUT_DIR/results.json
+cat "$OUTPUT_DIR/results.json"
 ```
 
-Let's walk through the key parts:
+Key points:
 
-**`#SBATCH` directives** tell SLURM what resources to allocate. `%j` in the output/error filenames is replaced with the job ID, so each run produces uniquely named log files.
+- **`--account=malaria`** charges the job to your project; **`--mem`**, **`--time`** and **`--cpus-per-task`** must always be set.
+- **`module load charliecloud/0.44`** must be in the script: modules from your interactive session are not reliably inherited.
+- **`-b /projects`** makes the project directory visible inside the container (the mount point was created in the image, see [Accessing your project data](#accessing-project-data)).
+- **`OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK`** makes multithreaded libraries use exactly the CPUs you reserved. For a tool with a threads option, pass `$SLURM_CPUS_PER_TASK` to it (for example `-t $SLURM_CPUS_PER_TASK`).
 
-**`module load apptainer`** makes the `apptainer` command available. Always include this in your job script — modules loaded in your interactive session aren't inherited by batch jobs.
-
-**`mkdir -p $OUTPUT_DIR`** creates a job-specific output directory. Using `$SLURM_JOB_ID` in the path keeps results from different runs separate.
-
-**`--bind $OUTPUT_DIR:/output`** mounts the scratch directory as `/output` inside the container. The Python script writes to `/output/results.json`, which actually lands on scratch.
-
-Submit the job:
+Submit and monitor:
 
 ```bash
-$ sbatch monte-carlo.slurm
+sbatch monte-carlo.slurm
+squeue --me
+seff <jobid>
 ```
 
-Monitor it:
+## MPI containers {#mpi-containers}
 
-```bash
-# Check job status
-$ squeue -u $USER
+MPI (Message Passing Interface) runs one program across several processes, possibly on several nodes. MPI containers need care: the MPI library inside the container must be compatible with the host's MPI.
 
-# Once completed, view the output
-$ cat monte-carlo_*.out
-$ cat mc_results_*/results.json
-```
+### The concept {#the-concept}
 
-<!-- TODO: Add a screenshot showing squeue output with the container job running -->
-
-## MPI Containers
-
-MPI (Message Passing Interface) enables running a single program across multiple nodes, with processes communicating over the high-speed network. MPI containers require special handling because the MPI library inside the container must be compatible with the host system's MPI and network drivers.
-
-### The Concept
-
-The recommended approach is the **hybrid model**: the container includes MPI libraries, but the *host* MPI launcher (`mpirun` or the cluster's equivalent) starts the processes. This lets the host handle network configuration and process placement while the container provides the application environment.
+The usual approach is the **hybrid model**: the container includes an MPI library, and the *host* MPI launcher starts the processes. The host handles process placement and the network; the container provides the application environment.
 
 ```
   Host System                    Container
@@ -247,13 +232,15 @@ The recommended approach is the **hybrid model**: the container includes MPI lib
 └─────────────────┘          └──────────────────┘
 ```
 
-**Important:** The MPI version inside the container should match or be newer than the host's MPI version. Using the same major version of OpenMPI generally works.
+The MPI version inside the container should be compatible with the host's: on <Var name="clusterName" /> the host provides `openmpi4/4.1.6` (`module load gnu12 openmpi4`), so use OpenMPI 4.x in the container.
 
-### The Example: Parallel Pi Estimation
+:::caution To be confirmed
+Running multi-node MPI programs inside Charliecloud containers has not been validated on <Var name="clusterName" /> yet. Test on a small case first, and contact support if processes fail to start or communicate.
+:::
 
-We'll create a version of the Monte Carlo simulation that distributes work across multiple MPI processes. Each process estimates Pi with a portion of the total samples, and the results are combined.
+### Example: parallel Pi estimation {#the-example-parallel-pi-estimation}
 
-On your workstation, create the project:
+Each MPI process estimates Pi with part of the samples, and the results are combined. On your workstation, create the project:
 
 ```bash
 mkdir ~/monte-carlo-mpi && cd ~/monte-carlo-mpi
@@ -316,7 +303,7 @@ if __name__ == "__main__":
     main()
 ```
 
-Create the `Dockerfile`:
+Create the `Dockerfile` (Ubuntu 22.04 provides OpenMPI 4.1):
 
 ```dockerfile
 FROM ubuntu:22.04
@@ -340,51 +327,14 @@ RUN chmod +x estimate_pi_mpi.py
 CMD ["python3", "estimate_pi_mpi.py"]
 ```
 
-Build and push:
+Build and push the image:
 
 ```bash
-$ docker build --platform linux/amd64 -t yourusername/monte-carlo-mpi:0.1 .
-[+] Building 51.6s (12/12) FINISHED                                                                                                                                                            docker:desktop-linux
- => [internal] load build definition from Dockerfile                                                                                                                                                           0.0s
- => => transferring dockerfile: 446B                                                                                                                                                                           0.0s
- => [internal] load metadata for docker.io/library/ubuntu:22.04                                                                                                                                                1.0s
- => [auth] library/ubuntu:pull token for registry-1.docker.io                                                                                                                                                  0.0s
- => [internal] load .dockerignore                                                                                                                                                                              0.0s
- => => transferring context: 2B                                                                                                                                                                                0.0s
- => [1/6] FROM docker.io/library/ubuntu:22.04@sha256:3ba65aa20f86a0fad9df2b2c259c613df006b2e6d0bfcc8a146afb8c525a9751                                                                                          1.1s
- => => resolve docker.io/library/ubuntu:22.04@sha256:3ba65aa20f86a0fad9df2b2c259c613df006b2e6d0bfcc8a146afb8c525a9751                                                                                          0.0s
- => => sha256:b1cba2e842ca52b95817f958faf99734080c78e92e43ce609cde9244867b49ed 29.54MB / 29.54MB                                                                                                               0.8s
- => => extracting sha256:b1cba2e842ca52b95817f958faf99734080c78e92e43ce609cde9244867b49ed                                                                                                                      0.3s
- => [internal] load build context                                                                                                                                                                              0.0s
- => => transferring context: 1.54kB                                                                                                                                                                            0.0s
- => [2/6] RUN apt-get update     && apt-get install -y --no-install-recommends         python3         python3-pip         openmpi-bin         libopenmpi-dev     && rm -rf /var/lib/apt/lists/*              40.4s
- => [3/6] RUN pip3 install --no-cache-dir mpi4py numpy                                                                                                                                                         2.5s
- => [4/6] WORKDIR /app                                                                                                                                                                                         0.0s
- => [5/6] COPY estimate_pi_mpi.py .                                                                                                                                                                            0.0s
- => [6/6] RUN chmod +x estimate_pi_mpi.py                                                                                                                                                                      0.1s
- => exporting to image                                                                                                                                                                                         6.3s
- => => exporting layers                                                                                                                                                                                        6.3s
- => => exporting manifest sha256:6ef2c750407397b709e1b0d616052e9fc6626b5a221b03302676f83ff1d2b6f0                                                                                                              0.0s
- => => exporting config sha256:99c2625718bb3a900f9e2efe51abf1c10f9c6e4b5b25806b543864a2feb55fcc                                                                                                                0.0s
- => => exporting attestation manifest sha256:5562fc2c080dc34fe0944bca9d807260209078cafb8b83021c9cddea0a9c157a                                                                                                  0.0s
- => => exporting manifest list sha256:2b9a09f20de16bc9187464b0cc04c7c33db9da1239d9991588ddf2395030bb86                                                                                                         0.0s
- => => naming to docker.io/ianwasukira/monte-carlo-mpi:0.1                                                                                                                                                     0.0s
-```
-
-```
+docker build --platform linux/amd64 -t yourusername/monte-carlo-mpi:0.1 .
 docker push yourusername/monte-carlo-mpi:0.1
-The push refers to repository [docker.io/yourusername/monte-carlo-mpi]
-54c6a19e1ba5: Pushed
-195d96c8233d: Pushed
-7125307ec0a6: Pushed
-64861010b1bc: Pushed
-16a2ff661819: Pushed
-b1cba2e842ca: Pushed
-658d7018384c: Pushed
-0.1: digest: sha256:2b9a09f20de16bc9187464b0cc04c7c33db9da1239d9991588ddf2395030bb86 size: 856
 ```
 
-Test locally with Docker before using cluster :
+Test it locally with Docker before using the cluster:
 
 ```bash
 # Single process
@@ -396,252 +346,93 @@ $ docker run --rm yourusername/monte-carlo-mpi:0.1 \
     mpirun -n 2 python3 /app/estimate_pi_mpi.py 5000000
 ```
 
-On ACE HPC, pull the image and create a batch script called `mpi-pi.slurm`:
+On the cluster, pull and convert the image in a job (see [Pulling an image](#pulling-an-image)) to `/scratch/malaria/$USER/images/monte-carlo-mpi-0.1`, then create `mpi-pi.slurm`:
 
 ```bash
 #!/bin/bash
 #SBATCH --job-name=mpi-pi
-#SBATCH --output=mpi-pi_%j.out
-#SBATCH --error=mpi-pi_%j.err
+#SBATCH --account=malaria
 #SBATCH --time=00:30:00
 #SBATCH --nodes=2
 #SBATCH --ntasks-per-node=8
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=16G
+#SBATCH --output=mpi-pi_%j.out
+#SBATCH --error=mpi-pi_%j.err
 
-module load apptainer
-module load openmpi
+module load gnu12 openmpi4 charliecloud/0.44
 
-CONTAINER=~/containers/monte-carlo-mpi.sif
+IMG=/scratch/malaria/$USER/images/monte-carlo-mpi-0.1
 
-echo "MPI Pi estimation: $SLURM_NTASKS total tasks across $SLURM_NNODES nodes"
+echo "MPI Pi estimation: $SLURM_NTASKS tasks across $SLURM_NNODES nodes"
 
-# Use the HOST mpirun to launch container processes.
-# This ensures proper network configuration and process placement.
-mpirun -np $SLURM_NTASKS apptainer exec $CONTAINER \
+# Use the HOST mpirun to launch the container processes.
+mpirun -np $SLURM_NTASKS ch-run --set-env "$IMG" -- \
     python3 /app/estimate_pi_mpi.py 100000000
 ```
 
-Submit:
+Submit it with `sbatch mpi-pi.slurm`. In the output file, each rank reports its hostname: ranks on the same node share a hostname, ranks on different nodes (`acegid-cpu-01`, `acegid-cpu-02`…) report different ones. This confirms that MPI communicates across nodes.
+
+## Containers for bioinformatics tools {#bioinformatics-containers}
+
+[BioContainers](https://biocontainers.pro/) publishes ready-made images for most bioconda tools on `quay.io`. Pick the exact tag on the tool's page, then pull and convert it in a job:
 
 ```bash
-$ sbatch mpi_pi.slurm
-Submitted batch job 1197
-$ cat mpi-pi_1197.out
-MPI Pi estimation: 8 total tasks across 1 nodes
-Estimating Pi with 100,000,000 total samples across 8 processes
-  Rank 5/8 on kla-ac-cpu-45: 9,818,024 hits from 12,500,000 samples
-  Rank 6/8 on kla-ac-cpu-45: 9,813,591 hits from 12,500,000 samples
-  Rank 7/8 on kla-ac-cpu-45: 9,814,575 hits from 12,500,000 samples
-  Rank 1/8 on kla-ac-cpu-45: 9,817,978 hits from 12,500,000 samples
-  Rank 2/8 on kla-ac-cpu-45: 9,818,049 hits from 12,500,000 samples
-  Rank 3/8 on kla-ac-cpu-45: 9,818,775 hits from 12,500,000 samples
-  Rank 4/8 on kla-ac-cpu-45: 9,817,634 hits from 12,500,000 samples
-  Estimate: 3.14142368
-  Error:    0.00016897
-  Time:     2.563s
-  Speedup:  8 processes
-  Rank 0/8 on kla-ac-cpu-45: 9,816,966 hits from 12,500,000 samples
+module load charliecloud/0.44
+ch-image pull quay.io/biocontainers/samtools:<tag>
+ch-convert quay.io/biocontainers/samtools:<tag> /scratch/malaria/$USER/images/samtools-<tag>
+ch-image reset
 ```
 
-See each rank report its hostname — ranks on the same node share a hostname, ranks on different nodes report different hostnames. This confirms MPI is communicating across nodes.
+For many bioinformatics tools, a conda environment is simpler: see [Custom installations](../../software/custom-install.md#conda-environments).
 
-## GPU Containers
+:::info Not available yet
+**Apptainer/Singularity** and **Nextflow** are not available on the cluster yet. Workflows that require them cannot run as is. To request them, open a ticket on <Var name="supportPortal" link />.
+:::
 
-GPU containers let you run CUDA workloads (deep learning, molecular dynamics, etc.) inside a container. Apptainer exposes the host's NVIDIA GPUs to the container with the `--nv` flag.
-
-### The Concept
-
-The `--nv` flag tells Apptainer to bind-mount the host's NVIDIA driver libraries and GPU devices into the container. The container must include CUDA libraries that are compatible with the host's NVIDIA driver version. As a rule: the host driver must be **equal to or newer** than the CUDA version in the container.
-
-You don't need to install NVIDIA drivers inside the container — `--nv` injects them from the host at runtime.
-
-### The Example: GPU Matrix Benchmark
-
-We'll create a container that benchmarks GPU performance with a matrix multiplication using PyTorch, then compare it to CPU performance.
-
-On your workstation, create `gpu_benchmark.py`:
-
-```python
-#!/usr/bin/env python3
-"""Benchmark matrix multiplication on CPU vs GPU."""
-
-import torch
-import time
-import argparse
-import os
-
-def benchmark(device, size, iterations):
-    """Run matrix multiplication benchmark on the given device."""
-    a = torch.randn(size, size, device=device)
-    b = torch.randn(size, size, device=device)
-
-    # Warm-up
-    torch.matmul(a, b)
-    if device.type == "cuda":
-        torch.cuda.synchronize()
-
-    start = time.time()
-    for _ in range(iterations):
-        torch.matmul(a, b)
-    if device.type == "cuda":
-        torch.cuda.synchronize()
-    elapsed = time.time() - start
-
-    # FLOPS for matrix multiplication: 2 * N^3 per multiply
-    flops = 2 * size**3 * iterations / elapsed
-    return elapsed, flops
-
-def main():
-    parser = argparse.ArgumentParser(description="GPU matrix multiplication benchmark")
-    parser.add_argument("--size", type=int, default=4096, help="Matrix size NxN")
-    parser.add_argument("--iterations", type=int, default=10)
-    parser.add_argument("--no-gpu", action="store_true", help="Skip GPU benchmark")
-    args = parser.parse_args()
-
-    job_id = os.environ.get("SLURM_JOB_ID", "local")
-    print(f"Matrix Benchmark (Job: {job_id})")
-    print(f"  PyTorch: {torch.__version__}")
-    print(f"  Matrix size: {args.size}x{args.size}")
-    print(f"  Iterations: {args.iterations}")
-    print()
-
-    # CPU benchmark
-    cpu_time, cpu_flops = benchmark(torch.device("cpu"), args.size, args.iterations)
-    print(f"  CPU: {cpu_time:.3f}s ({cpu_flops/1e9:.1f} GFLOPS)")
-
-    # GPU benchmark
-    if not args.no_gpu and torch.cuda.is_available():
-        print(f"  CUDA: {torch.version.cuda}")
-        for i in range(torch.cuda.device_count()):
-            props = torch.cuda.get_device_properties(i)
-            print(f"  GPU {i}: {props.name} ({props.total_memory / 1e9:.1f} GB)")
-
-        gpu_time, gpu_flops = benchmark(torch.device("cuda"), args.size, args.iterations)
-        print(f"  GPU: {gpu_time:.3f}s ({gpu_flops/1e12:.2f} TFLOPS)")
-        print(f"  Speedup: {cpu_time/gpu_time:.1f}x")
-    elif args.no_gpu:
-        print("  GPU: skipped (--no-gpu)")
-    else:
-        print("  GPU: not available. Did you use the --nv flag?")
-
-if __name__ == "__main__":
-    main()
-```
-
-Create the `Dockerfile`:
-
-```dockerfile
-FROM nvidia/cuda:12.2.0-cudnn8-runtime-ubuntu22.04
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        python3 \
-        python3-pip \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN pip3 install --no-cache-dir \
-    torch torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/cu121
-
-WORKDIR /app
-COPY gpu_benchmark.py .
-
-CMD ["python3", "gpu_benchmark.py"]
-```
-
-Build and push:
-
-```bash
-$ docker build -t yourusername/gpu-benchmark:0.1 .
-$ docker push yourusername/gpu-benchmark:0.1
-```
-
-On ACE HPC, pull the image and create `gpu-bench.slurm`:
-
-```bash
-#!/bin/bash
-#SBATCH --job-name=gpu-bench
-#SBATCH --output=gpu-bench_%j.out
-#SBATCH --error=gpu-bench_%j.err
-#SBATCH --time=00:15:00
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
-#SBATCH --gres=gpu:1
-#SBATCH --partition=gpu
-
-module load apptainer
-
-CONTAINER=~/containers/gpu-benchmark.sif
-
-echo "GPU Benchmark - Job $SLURM_JOB_ID on $(hostname)"
-
-# The --nv flag exposes the host GPU to the container
-apptainer exec --nv $CONTAINER python3 /app/gpu_benchmark.py --size 8192 --iterations 20
-```
-
-Submit:
-
-```bash
-$ sbatch gpu-bench.slurm
-```
-
-The output will show CPU GFLOPS vs GPU TFLOPS — typically a 30–100x speedup for matrix operations, depending on the GPU model and matrix size.
-
-Without `--nv`, the container cannot see the GPU and `torch.cuda.is_available()` returns `False`. This is the most common mistake when running GPU containers.
-
-<!-- TODO: Add a screenshot showing the GPU benchmark output comparing CPU vs GPU performance -->
-
-## Troubleshooting
+## Troubleshooting {#troubleshooting}
 
 | Problem | Cause | Solution |
 |---------|-------|----------|
-| `command not found` inside container | Binary isn't in the container's `$PATH` | Check with `apptainer exec container.sif which python` or use the full path |
-| GPU not detected | Missing `--nv` flag | Add `--nv` to the `apptainer exec` command |
-| GPU not detected | No GPU allocated by SLURM | Add `#SBATCH --gres=gpu:1` and `#SBATCH --partition=gpu` |
-| MPI processes all on same node | Not using host MPI launcher | Use `mpirun -np $SLURM_NTASKS apptainer exec ...` not `apptainer exec ... mpirun` |
-| Host environment leaking in | Host `$PATH` or Python paths interfere | Use `--cleanenv` to start with a clean environment |
+| `ch-run: command not found` | Module not loaded | Add `module load charliecloud/0.44` (also in the job script) |
+| `command not found` inside the container | Program not in the container's `PATH` | Add `--set-env`, or use the full path (`ch-run "$IMG" -- which python`) |
+| Bind mount fails (`can't mkdir`, `No such file`) | Mount point missing in the image | `mkdir -p "$IMG/projects"` (and the others), see [Accessing your project data](#accessing-project-data) |
+| `Read-only file system` | Writing inside the image | Write to a mounted directory (`/projects/...`, `/scratch/...`) or your home |
+| `ch-image pull` cannot connect | No access to the registry | Use [Importing an image without internet access](#importing-an-image-without-internet-access) |
+| `exec format error` | Image built for ARM (Apple Silicon Mac) | Rebuild with `--platform linux/amd64`, see [Advanced build topics](advanced-builds.md#multi-architecture-builds) |
+| MPI processes all on the same node | Not using the host launcher | Use `mpirun -np $SLURM_NTASKS ch-run ...`, not `ch-run ... mpirun` |
+| Host environment leaking in | Host `PATH` or Python variables interfere | Remove them with `--unset-env=PYTHONPATH` (or another variable name) |
 
-## Quick Reference
+## Quick reference {#quick-reference}
 
 ```bash
 # Load the module
-module load apptainer
+module load charliecloud/0.44
 
-# Pull a Docker image
-apptainer pull docker://image:tag
-apptainer pull custom_name.sif docker://image:tag
+# Pull an image into the ch-image cache, then convert it to a directory
+ch-image pull image:tag
+ch-convert image:tag /scratch/malaria/$USER/images/name
 
-# Run a command in a container
-apptainer exec image.sif command args
+# Convert a tarball made with "docker export"
+ch-convert image.tar.gz /scratch/malaria/$USER/images/name
+
+# Run a command in a container (with the image's ENV variables)
+ch-run --set-env /scratch/malaria/$USER/images/name -- command args
 
 # Interactive shell
-apptainer shell image.sif
+ch-run /scratch/malaria/$USER/images/name -- /bin/bash
 
-# Run with GPU
-apptainer exec --nv image.sif command
+# Bind project, scratch and reference directories
+ch-run -b /projects -b /scratch -b /references /scratch/malaria/$USER/images/name -- command
 
-# Run with custom bind mounts
-apptainer exec --bind /host/path:/container/path:ro image.sif command
-
-# Run with clean environment
-apptainer exec --cleanenv image.sif command
-
-# Pass environment variables
-apptainer exec --env KEY=VALUE image.sif command
-
-# Inspect image metadata
-apptainer inspect image.sif
-
-# Manage cache
-apptainer cache list
-apptainer cache clean
+# Images in the ch-image cache, and cleanup
+ch-image list
+ch-image delete image:tag
+ch-image reset
 ```
 
 ---
 
-**See also:** [SLURM Basics](../running-jobs/slurm-basics) | [Writing Job Scripts](../running-jobs/job-scripts) | [Apptainer User Guide](https://apptainer.org/docs/user/latest/)
+**See also:** [Slurm basics](../running-jobs/slurm-basics.md) | [Writing job scripts](../running-jobs/job-scripts.md) | [Charliecloud documentation](https://charliecloud.io/)
 
-**Next:** [Advanced Build Topics](advanced-builds) — reduce image size with multi-stage builds and support multiple CPU architectures.
+**Next:** [Advanced build topics](advanced-builds.md) — reduce image size with multi-stage builds and support several CPU architectures.

@@ -1,6 +1,7 @@
 import Link from '@docusaurus/Link';
 import Translate, {translate} from '@docusaurus/Translate';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import Layout from '@theme/Layout';
 import Heading from '@theme/Heading';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
@@ -12,13 +13,22 @@ function Hero() {
     <header className={styles.hero}>
       <div className={`container ${styles.heroInner}`}>
         <div className={styles.heroText}>
-          <p className={styles.eyebrow}>
-            <Translate
-              id="home.hero.eyebrow"
-              values={{former: site.instituteFormer}}>
-              {'Institute of Genomics and Global Health · formerly {former}'}
-            </Translate>
-          </p>
+          <div className={styles.brand}>
+            <img
+              src={useBaseUrl('/img/igh-logo.png')}
+              alt={site.instituteName}
+              className={styles.heroLogo}
+              width="72"
+              height="72"
+            />
+            <p className={styles.eyebrow}>
+              <Translate
+                id="home.hero.eyebrow"
+                values={{former: site.instituteFormer}}>
+                {'Institute of Genomics and Global Health · formerly {former}'}
+              </Translate>
+            </p>
+          </div>
           <Heading as="h1" className={styles.title}>
             <Translate id="home.hero.title">
               High Performance Computing for genomics research
@@ -46,8 +56,8 @@ function Hero() {
           </div>
           <pre className={styles.terminalBody}>
             <span className={styles.prompt}>$</span> ssh username@{site.loginHost}{'\n'}
-            <span className={styles.prompt}>$</span> module load samtools{'\n'}
-            <span className={styles.prompt}>$</span> sbatch my_job.sh{'\n'}
+            <span className={styles.prompt}>$</span> module load anaconda/2025.06{'\n'}
+            <span className={styles.prompt}>$</span> sbatch --account=malaria my_job.sh{'\n'}
             <span className={styles.muted}>Submitted batch job 123456</span>{'\n'}
             <span className={styles.prompt}>$</span> squeue --me
           </pre>
